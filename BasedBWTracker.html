@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Based Bodyworks Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+/* ─────────────────────────── TOKENS ─────────────────────────── */
+:root{
+  --bg:#05080f; --bg2:#080d16; --surface:#0d1420;
+  --glass:rgba(13,20,32,.7);
+  --border:#1a2840; --border2:rgba(255,255,255,.06);
+  --lime:#b8f000; --lime2:#d4ff2a; --lime-glow:rgba(184,240,0,.15);
+  --pink:#ff3d82; --pink-glow:rgba(255,61,130,.12);
+  --blue:#00e5ff; --blue-glow:rgba(0,229,255,.1);
+  --purple:#a855f7; --purple-glow:rgba(168,85,247,.12);
+  --orange:#ff7a1a;
+  --text:#dde6f0; --text2:#8da0b8; --text3:#4a6080;
+  --r:12px; --r2:18px;
+  --shadow-card:0 4px 24px rgba(0,0,0,.4),0 1px 0 rgba(255,255,255,.03);
+  --shadow-hover:0 20px 60px rgba(0,0,0,.6),0 0 0 1px rgba(184,240,0,.15),0 0 40px rgba(184,240,0,.05);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  background:var(--bg);color:var(--text);
+  overflow-x:hidden;
+}
+a{text-decoration:none;color:inherit}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* ─────────────────────────── LOADER ─────────────────────────── */
+#loader{
+  position:fixed;inset:0;z-index:9998;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2rem;
+  transition:opacity .6s ease,visibility .6s ease;
+}
+#loader.gone{opacity:0;visibility:hidden;pointer-events:none}
+.loader-logo{
+  font-family:'Bebas Neue',sans-serif;font-size:2.4rem;letter-spacing:.12em;
+  color:var(--lime);text-shadow:0 0 40px rgba(184,240,0,.4);
+  animation:loader-pulse 1.2s ease-in-out infinite;
+}
+@keyframes loader-pulse{0%,100%{opacity:1;text-shadow:0 0 40px rgba(184,240,0,.4)}50%{opacity:.6;text-shadow:0 0 80px rgba(184,240,0,.8)}}
+.loader-track{width:220px;height:2px;background:var(--border);border-radius:999px;overflow:hidden}
+.loader-fill{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,var(--lime),var(--blue));transition:width 1.8s cubic-bezier(.16,1,.3,1)}
+.loader-status{font-family:'JetBrains Mono',monospace;font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;color:var(--text3)}
+.loader-dots::after{content:'...';animation:dots 1.2s steps(4,end) infinite}
+@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}100%{content:''}}
+
+/* scan line on loader */
+#loader::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(to bottom,transparent 0%,rgba(184,240,0,.04) 50%,transparent 100%);
+  background-size:100% 60px;
+  animation:scan 2s linear infinite;pointer-events:none;
+}
+@keyframes scan{from{background-position:0 -60px}to{background-position:0 100vh}}
+
+/* ─────────────────────────── TOAST ─────────────────────────── */
+#toastZone{position:fixed;bottom:24px;right:24px;z-index:9000;display:flex;flex-direction:column;gap:.5rem;align-items:flex-end;pointer-events:none}
+.toast{
+  font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.05em;
+  padding:10px 16px;border-radius:var(--r);
+  background:rgba(13,20,32,.95);border:1px solid var(--border);
+  backdrop-filter:blur(20px);
+  display:flex;align-items:center;gap:.6rem;
+  transform:translateX(120%);opacity:0;
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .35s ease;
+  white-space:nowrap;max-width:320px;
+}
+.toast.show{transform:translateX(0);opacity:1}
+.toast-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.toast-lime{border-color:rgba(184,240,0,.3)} .toast-lime .toast-dot{background:var(--lime);box-shadow:0 0 6px var(--lime)}
+.toast-pink{border-color:rgba(255,61,130,.3)} .toast-pink .toast-dot{background:var(--pink);box-shadow:0 0 6px var(--pink)}
+.toast-blue{border-color:rgba(0,229,255,.3)}  .toast-blue .toast-dot{background:var(--blue);box-shadow:0 0 6px var(--blue)}
+
+/* ─────────────────────────── NAV ─────────────────────────── */
+nav{
+  position:sticky;top:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 clamp(1rem,5vw,3rem);height:60px;
+  background:rgba(5,8,15,.85);backdrop-filter:blur(28px);saturate(1.8);
+  border-bottom:1px solid var(--border2);
+}
+nav::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--lime),transparent);opacity:.35}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.1em;color:var(--lime);filter:drop-shadow(0 0 12px rgba(184,240,0,.5))}
+.nav-logo span{color:var(--text)}
+.nav-links{display:flex;gap:1.5rem;list-style:none}
+.nav-links a{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);transition:color .2s;position:relative;padding-bottom:2px}
+.nav-links a::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:1px;background:var(--lime);transform:scaleX(0);transition:transform .25s}
+.nav-links a:hover{color:var(--lime)}
+.nav-links a:hover::after,.nav-links a.active::after{transform:scaleX(1)}
+.nav-links a.active{color:var(--lime)}
+.nav-right{display:flex;align-items:center;gap:.75rem}
+.nav-time{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text3);letter-spacing:.1em}
+.nav-badge{
+  display:flex;align-items:center;gap:.4rem;
+  background:rgba(255,61,130,.12);color:var(--pink);
+  font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:700;
+  padding:5px 12px;border-radius:999px;letter-spacing:.08em;
+  border:1px solid rgba(255,61,130,.3);
+  animation:badge-pulse 2.4s ease-in-out infinite;
+}
+.badge-blink{width:5px;height:5px;border-radius:50%;background:var(--pink);animation:blink .8s ease-in-out infinite}
+@keyframes badge-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,61,130,.3)}50%{box-shadow:0 0 0 6px rgba(255,61,130,0)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ─────────────────────────── KPI STRIP ─────────────────────────── */
+.kpi-strip{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:0 clamp(1rem,5vw,3rem);
+  display:flex;align-items:stretch;overflow:hidden;
+  position:relative;
+}
+.kpi-strip::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--lime-glow),transparent)}
+.kpi-tile{
+  flex:1;padding:1rem 1.4rem;display:flex;flex-direction:column;gap:.35rem;
+  border-right:1px solid var(--border);position:relative;overflow:hidden;
+  transition:background .25s;
+}
+.kpi-tile:last-child{border-right:none}
+.kpi-tile:hover{background:rgba(184,240,0,.03)}
+.kpi-tile::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;transform:scaleX(0);transform-origin:left;transition:transform .3s}
+.kpi-tile:nth-child(1)::after{background:var(--lime)}
+.kpi-tile:nth-child(2)::after{background:var(--blue)}
+.kpi-tile:nth-child(3)::after{background:var(--pink)}
+.kpi-tile:nth-child(4)::after{background:var(--purple)}
+.kpi-tile:hover::after{transform:scaleX(1)}
+.kpi-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text3)}
+.kpi-val{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.04em;line-height:1}
+.kpi-tile:nth-child(1) .kpi-val{color:var(--lime)}
+.kpi-tile:nth-child(2) .kpi-val{color:var(--blue)}
+.kpi-tile:nth-child(3) .kpi-val{color:var(--pink)}
+.kpi-tile:nth-child(4) .kpi-val{color:var(--purple)}
+.kpi-delta{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--lime);display:flex;align-items:center;gap:.25rem}
+.kpi-delta.down{color:var(--pink)}
+
+/* ─────────────────────────── HERO ─────────────────────────── */
+.hero{
+  position:relative;min-height:520px;
+  display:grid;place-items:center;text-align:center;
+  padding:5rem clamp(1rem,5vw,3rem) 4rem;
+  overflow:hidden;
+}
+/* animated mesh gradient */
+.hero-mesh{
+  position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 40%, rgba(184,240,0,.055) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 60% at 80% 60%, rgba(0,229,255,.05) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 50% 80%, rgba(168,85,247,.04) 0%, transparent 70%);
+  animation:mesh-drift 12s ease-in-out infinite alternate;
+}
+@keyframes mesh-drift{
+  0%{background-position:0% 0%,100% 100%,50% 100%}
+  100%{background-position:10% 20%,90% 80%,55% 90%}
+}
+/* grid lines */
+.hero-grid{
+  position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(26,40,64,.5) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(26,40,64,.5) 1px,transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%);
+}
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:.5rem;
+  font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.25em;text-transform:uppercase;
+  color:var(--lime);margin-bottom:1.2rem;
+  opacity:0;animation:fade-up .6s .2s ease forwards;
+}
+.dot-live{width:6px;height:6px;background:var(--lime);border-radius:50%;box-shadow:0 0 8px var(--lime);animation:blink 1.2s ease-in-out infinite}
+.hero h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(3.8rem,11vw,9rem);
+  line-height:.88;letter-spacing:.02em;
+  opacity:0;animation:fade-up .8s .3s ease forwards;
+}
+.hero h1 .gradient-text{
+  background:linear-gradient(135deg,var(--lime) 0%,var(--blue) 50%,var(--lime2) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;display:block;
+  filter:drop-shadow(0 0 30px rgba(184,240,0,.3));
+}
+.hero-sub{
+  max-width:500px;margin:1.6rem auto 0;
+  font-size:.95rem;color:var(--text2);line-height:1.75;
+  opacity:0;animation:fade-up .8s .5s ease forwards;
+}
+.hero-cta{
+  display:inline-flex;align-items:center;gap:.6rem;
+  margin-top:2rem;
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+  background:var(--lime);color:#05080f;
+  padding:12px 28px;border-radius:999px;font-weight:700;
+  transition:all .2s;cursor:pointer;border:none;
+  opacity:0;animation:fade-up .8s .65s ease forwards;
+}
+.hero-cta:hover{background:var(--lime2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(184,240,0,.35)}
+@keyframes fade-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─────────────────────────── MARQUEE ─────────────────────────── */
+.marquee-wrap{
+  overflow:hidden;
+  background:linear-gradient(90deg,var(--bg),rgba(184,240,0,.04),var(--bg));
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  padding:9px 0;position:relative;
+}
+.marquee-wrap::before,.marquee-wrap::after{content:'';position:absolute;top:0;bottom:0;width:80px;z-index:1;pointer-events:none}
+.marquee-wrap::before{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
+.marquee-wrap::after{right:0;background:linear-gradient(270deg,var(--bg),transparent)}
+.marquee-track{display:flex;gap:2.5rem;animation:marquee 30s linear infinite;width:max-content}
+.marquee-item{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--text3);white-space:nowrap}
+.marquee-item .sep{color:var(--lime);margin:0 .4rem;opacity:.5}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ─────────────────────────── SHARED LAYOUT ─────────────────────────── */
+.sw{padding:4rem clamp(1rem,5vw,3rem);max-width:1340px;margin:0 auto}
+.sh{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:2.2rem;flex-wrap:wrap;gap:1rem}
+.sl{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.22em;text-transform:uppercase;color:var(--text3);margin-bottom:.45rem}
+.st{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.2rem,5vw,3.5rem);letter-spacing:.03em;line-height:1}
+.gradient-accent{background:linear-gradient(135deg,var(--lime),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.gradient-pink{background:linear-gradient(135deg,var(--pink),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.gradient-blue{background:linear-gradient(135deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.gradient-purple{background:linear-gradient(135deg,var(--purple),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+.see-all{
+  font-family:'JetBrains Mono',monospace;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text3);border:1px solid var(--border);padding:8px 18px;border-radius:999px;
+  transition:all .25s;cursor:pointer;background:none;
+}
+.see-all:hover{border-color:var(--lime);color:var(--lime);background:var(--lime-glow)}
+
+/* section reveal */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
+.reveal.in{opacity:1;transform:translateY(0)}
+
+/* ─────────────────────────── SKELETON ─────────────────────────── */
+.skeleton{
+  border-radius:6px;
+  background:linear-gradient(90deg,var(--border) 25%,rgba(30,44,66,.7) 50%,var(--border) 75%);
+  background-size:200% 100%;
+  animation:shimmer 1.6s infinite;
+}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+.skel-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.skel-img{width:100%;height:200px}
+.skel-body{padding:1rem}
+.skel-line{height:10px;margin-bottom:.6rem}
+.skel-line.w60{width:60%}.skel-line.w80{width:80%}.skel-line.w40{width:40%}
+
+/* ─────────────────────────── FILTERS ─────────────────────────── */
+.filter-tabs{display:flex;gap:.4rem;margin-bottom:1.8rem;flex-wrap:wrap}
+.tab{
+  font-family:'JetBrains Mono',monospace;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:7px 16px;border-radius:999px;border:1px solid var(--border);
+  background:transparent;color:var(--text3);cursor:pointer;transition:all .2s;
+}
+.tab:hover{border-color:rgba(184,240,0,.4);color:var(--lime)}
+.tab.active{
+  background:linear-gradient(135deg,rgba(184,240,0,.15),rgba(0,229,255,.08));
+  border-color:rgba(184,240,0,.5);color:var(--lime);font-weight:700;
+}
+.search-wrap{position:relative;max-width:340px;width:100%}
+.search-input{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:999px;padding:10px 20px 10px 42px;
+  font-family:'JetBrains Mono',monospace;font-size:.74rem;color:var(--text);outline:none;
+  transition:border-color .25s,box-shadow .25s;
+}
+.search-input::placeholder{color:var(--text3)}
+.search-input:focus{border-color:rgba(184,240,0,.5);box-shadow:0 0 0 3px rgba(184,240,0,.08)}
+.search-icon{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;font-size:.8rem}
+
+/* ─────────────────────────── PRODUCT CARDS ─────────────────────────── */
+@keyframes card-in{from{opacity:0;transform:translateY(24px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.1rem}
+.product-card{
+  background:linear-gradient(145deg,rgba(13,20,32,.98),rgba(8,13,22,.99));
+  border:1px solid var(--border2);
+  border-radius:var(--r);overflow:hidden;
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s ease;
+  animation:card-in .5s ease both;
+  position:relative;cursor:pointer;
+}
+/* gradient border on hover using pseudo */
+.product-card::before{
+  content:'';position:absolute;inset:0;border-radius:var(--r);z-index:1;
+  background:linear-gradient(145deg,rgba(184,240,0,.25),transparent 60%,rgba(0,229,255,.12));
+  opacity:0;transition:opacity .3s;pointer-events:none;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;padding:1px;
+}
+.product-card:hover{transform:translateY(-8px) scale(1.01);box-shadow:var(--shadow-hover)}
+.product-card:hover::before{opacity:1}
+.card-image-wrap{position:relative;overflow:hidden}
+.card-image{width:100%;height:200px;object-fit:cover;display:block;transition:transform .5s ease}
+.product-card:hover .card-image{transform:scale(1.05)}
+.card-image-wrap::after{content:'';position:absolute;bottom:0;left:0;right:0;height:80px;background:linear-gradient(to top,rgba(13,20,32,1),transparent)}
+.card-status{
+  position:absolute;top:10px;right:10px;z-index:2;
+  font-family:'JetBrains Mono',monospace;font-size:.58rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  padding:4px 10px;border-radius:999px;backdrop-filter:blur(12px);
+}
+.status-available{background:rgba(184,240,0,.15);color:var(--lime);border:1px solid rgba(184,240,0,.35)}
+.status-soldout{background:rgba(255,61,130,.12);color:var(--pink);border:1px solid rgba(255,61,130,.3)}
+.status-limited{background:rgba(0,229,255,.12);color:var(--blue);border:1px solid rgba(0,229,255,.3)}
+.status-restock{background:rgba(255,122,26,.12);color:var(--orange);border:1px solid rgba(255,122,26,.3)}
+.card-body{padding:.9rem 1.1rem 1.1rem;position:relative;z-index:2}
+.card-category{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;color:var(--text3);margin-bottom:.3rem}
+.card-name{font-size:.92rem;font-weight:700;line-height:1.35;margin-bottom:.6rem;color:var(--text)}
+.card-footer{display:flex;align-items:center;justify-content:space-between}
+.card-price{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.04em;color:var(--lime)}
+.card-hype{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--text3)}
+.hype-dot{width:5px;height:5px;border-radius:50%;background:var(--pink);box-shadow:0 0 4px var(--pink)}
+/* shimmer effect overlay on card hover */
+.card-shimmer{position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.04) 50%,transparent 60%);transform:translateX(-100%);transition:transform .6s ease;pointer-events:none;z-index:3}
+.product-card:hover .card-shimmer{transform:translateX(100%)}
+
+/* ─────────────────────────── KW SECTION ─────────────────────────── */
+.kw-section{background:linear-gradient(180deg,rgba(168,85,247,.04) 0%,transparent 100%);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.live-feed{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  padding:.85rem 1.25rem;margin-bottom:1.5rem;
+  display:flex;align-items:center;gap:1rem;overflow:hidden;
+  position:relative;
+}
+.live-feed::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--pink),transparent);opacity:.5}
+.live-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;text-transform:uppercase;letter-spacing:.18em;color:var(--pink);white-space:nowrap;display:flex;align-items:center;gap:.4rem}
+.feed-dot{width:5px;height:5px;border-radius:50%;background:var(--pink);box-shadow:0 0 5px var(--pink);animation:blink .8s ease-in-out infinite}
+.feed-scroll{overflow:hidden;flex:1}
+.feed-inner{display:flex;gap:3rem;width:max-content;animation:feed-scroll 22s linear infinite}
+.feed-event{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--text3);white-space:nowrap}
+.feed-event strong{color:var(--text)}
+.feed-event .khi{color:var(--purple)}
+@keyframes feed-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+.kw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1.1rem}
+.kw-card{
+  background:linear-gradient(145deg,rgba(13,20,32,.98),rgba(8,13,22,.99));
+  border:1px solid var(--border2);border-radius:var(--r);
+  padding:1.2rem 1.25rem;display:flex;flex-direction:column;gap:.75rem;
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1),border-color .3s,box-shadow .3s;
+  animation:card-in .5s ease both;position:relative;overflow:hidden;
+}
+.kw-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--purple),var(--pink));opacity:0;transition:opacity .3s}
+.kw-card:hover{transform:translateY(-6px);border-color:rgba(168,85,247,.25);box-shadow:0 16px 48px rgba(0,0,0,.5),0 0 0 1px rgba(168,85,247,.12)}
+.kw-card:hover::after{opacity:1}
+.kw-card.top-kw{border-color:rgba(184,240,0,.25);box-shadow:0 0 0 1px rgba(184,240,0,.08)}
+.kw-card.top-kw::after{background:linear-gradient(90deg,var(--lime),var(--blue));opacity:1}
+.kw-header{display:flex;align-items:center;justify-content:space-between}
+.kw-badge{font-family:'JetBrains Mono',monospace;font-size:.57rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:999px}
+.b-hot{background:rgba(255,122,26,.12);color:var(--orange);border:1px solid rgba(255,122,26,.25);animation:blink 1.5s ease-in-out infinite}
+.b-pink{background:rgba(255,61,130,.1);color:var(--pink);border:1px solid rgba(255,61,130,.22)}
+.b-purple{background:rgba(168,85,247,.1);color:var(--purple);border:1px solid rgba(168,85,247,.22)}
+.kw-rank{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--text3)}
+.kw-rank.gold{color:var(--lime)}
+.kw-word{font-size:1rem;font-weight:700;line-height:1.2;color:var(--text)}
+.kw-count-row{display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap}
+.kw-count{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.04em;line-height:1;transition:color .4s}
+.kw-count.tick{color:var(--lime);text-shadow:0 0 12px rgba(184,240,0,.5)}
+.kw-count-label{font-family:'JetBrains Mono',monospace;font-size:.56rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text3);line-height:1.4}
+.kw-vel{display:inline-flex;align-items:center;gap:.3rem;font-family:'JetBrains Mono',monospace;font-size:.6rem;padding:3px 9px;border-radius:999px;margin-left:auto}
+.v-fire{background:rgba(255,61,130,.1);color:var(--pink);border:1px solid rgba(255,61,130,.2)}
+.v-med{background:rgba(0,229,255,.08);color:var(--blue);border:1px solid rgba(0,229,255,.18)}
+.kw-spark{width:100%;height:44px;overflow:visible;display:block}
+.kw-metrics{display:flex;gap:1rem}
+.kw-metric{display:flex;flex-direction:column;gap:2px}
+.km-val{font-family:'JetBrains Mono',monospace;font-size:.74rem;font-weight:700}
+.km-val.up{color:var(--lime)} .km-val.hot{color:var(--pink)} .km-val.neu{color:var(--blue)}
+.km-key{font-family:'JetBrains Mono',monospace;font-size:.54rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.kw-footer{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
+.kw-tags{display:flex;flex-wrap:wrap;gap:.3rem;align-items:center;flex:1}
+.kw-tag{font-family:'JetBrains Mono',monospace;font-size:.57rem;letter-spacing:.04em;padding:2px 7px;border-radius:999px;background:rgba(168,85,247,.08);color:var(--purple);border:1px solid rgba(168,85,247,.15)}
+.predict-btn{
+  font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;
+  padding:5px 11px;border-radius:999px;border:1px solid var(--border);
+  background:transparent;color:var(--text3);cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0;
+}
+.predict-btn:hover{border-color:var(--lime);color:var(--lime);background:var(--lime-glow)}
+
+/* ─────────────────────────── PREDICTION LAB ─────────────────────────── */
+.lab-section{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(184,240,0,.02) 0%,rgba(0,229,255,.02) 100%)}
+.lab-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:1.5rem;align-items:start}
+@media(max-width:860px){.lab-grid{grid-template-columns:1fr}}
+.lab-input-panel{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);
+  padding:1.6rem;display:flex;flex-direction:column;gap:1.1rem;
+}
+.lab-panel-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--lime);display:flex;align-items:center;gap:.4rem}
+.lab-scan{width:5px;height:5px;border-radius:50%;background:var(--lime);box-shadow:0 0 5px var(--lime);animation:blink .7s infinite}
+.lab-input-row{display:flex;gap:.6rem}
+.lab-input{
+  flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:999px;
+  padding:12px 20px;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--text);
+  outline:none;transition:border-color .25s,box-shadow .25s;
+}
+.lab-input::placeholder{color:var(--text3)}
+.lab-input:focus{border-color:rgba(184,240,0,.5);box-shadow:0 0 0 3px rgba(184,240,0,.08)}
+.lab-go{
+  font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:.08em;
+  padding:0 24px;border-radius:999px;border:none;
+  background:linear-gradient(135deg,var(--lime),var(--lime2));
+  color:#05080f;cursor:pointer;transition:all .2s;white-space:nowrap;font-weight:700;
+}
+.lab-go:hover{transform:scale(1.04);box-shadow:0 4px 20px rgba(184,240,0,.3)}
+.lab-go:active{transform:scale(.97)}
+.lab-go.busy{opacity:.4;pointer-events:none}
+.lab-chips-label{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--text3)}
+.lab-chips{display:flex;flex-wrap:wrap;gap:.4rem}
+.lab-chip{
+  font-family:'JetBrains Mono',monospace;font-size:.65rem;letter-spacing:.04em;
+  padding:5px 12px;border-radius:999px;border:1px solid var(--border);
+  background:transparent;color:var(--text3);cursor:pointer;transition:all .2s;
+}
+.lab-chip:hover{border-color:var(--purple);color:var(--purple);background:var(--purple-glow)}
+.lab-chip.active-chip{border-color:var(--lime);color:var(--lime);background:var(--lime-glow)}
+.lab-formula{border:1px dashed rgba(26,40,64,.8);border-radius:var(--r);padding:1rem;display:flex;flex-direction:column;gap:.5rem}
+.lab-formula-title{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--text3)}
+.formula-row{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+.formula-token{font-family:'JetBrains Mono',monospace;font-size:.65rem;padding:3px 9px;border-radius:5px}
+.ft-scent{background:rgba(184,240,0,.08);color:var(--lime);border:1px solid rgba(184,240,0,.2)}
+.ft-mod{background:rgba(168,85,247,.08);color:var(--purple);border:1px solid rgba(168,85,247,.2)}
+.ft-type{background:rgba(0,229,255,.08);color:var(--blue);border:1px solid rgba(0,229,255,.2)}
+.ft-plus{font-family:'JetBrains Mono',monospace;font-size:.9rem;color:var(--text3)}
+.formula-example{font-family:'JetBrains Mono',monospace;font-size:.61rem;color:var(--text3);line-height:1.7;border-top:1px solid var(--border);padding-top:.5rem}
+.lab-output-panel{display:flex;flex-direction:column;gap:1rem;position:sticky;top:72px}
+.lab-result-card{
+  background:linear-gradient(145deg,rgba(13,20,32,.99),rgba(8,13,22,1));
+  border:1px solid var(--border2);border-radius:var(--r2);
+  padding:1.6rem;display:flex;flex-direction:column;gap:1rem;
+  position:relative;overflow:hidden;min-height:340px;
+}
+.lab-result-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--lime),var(--blue),var(--purple));opacity:.8}
+/* inner glow when active */
+.lab-result-card.active-glow{box-shadow:0 0 0 1px rgba(184,240,0,.15),0 20px 60px rgba(0,0,0,.5),inset 0 0 60px rgba(184,240,0,.02)}
+.lab-idle{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.8rem;height:100%;min-height:260px;color:var(--text3)}
+.lab-idle-icon{font-size:2.8rem;opacity:.25;filter:grayscale(1)}
+.lab-idle-text{font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.15em;text-transform:uppercase}
+.lab-result{display:none;flex-direction:column;gap:.9rem}
+.lab-result.visible{display:flex}
+.lab-result-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--blue);display:flex;align-items:center;gap:.4rem}
+.scan-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);box-shadow:0 0 5px var(--blue);animation:blink .7s infinite}
+.lab-product-name{
+  font-family:'Bebas Neue',sans-serif;font-size:1.75rem;letter-spacing:.04em;line-height:1.08;
+  background:linear-gradient(135deg,var(--text) 0%,var(--lime) 60%,var(--blue) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  min-height:2.2rem;
+}
+.lab-product-name .cursor{display:inline-block;width:3px;height:1.1em;background:var(--lime);margin-left:2px;vertical-align:middle;animation:blink .5s step-end infinite;-webkit-text-fill-color:var(--lime)}
+.conf-block{display:flex;align-items:center;gap:1rem}
+.conf-ring-wrap{position:relative;width:80px;height:80px;flex-shrink:0}
+.conf-svg{width:80px;height:80px;transform:rotate(-90deg)}
+.cr-bg{fill:none;stroke:var(--border);stroke-width:5}
+.cr-fg{fill:none;stroke:url(#confGrad);stroke-width:5;stroke-linecap:round;stroke-dasharray:220;transition:stroke-dashoffset 1.4s cubic-bezier(.22,1,.36,1)}
+.conf-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column}
+.conf-pct{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--lime);line-height:1;filter:drop-shadow(0 0 8px rgba(184,240,0,.5))}
+.conf-sub{font-family:'JetBrains Mono',monospace;font-size:.42rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.conf-bars{flex:1;display:flex;flex-direction:column;gap:.4rem}
+.conf-bar-row{display:flex;align-items:center;gap:.5rem}
+.conf-bar-lbl{font-family:'JetBrains Mono',monospace;font-size:.56rem;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;min-width:68px}
+.conf-bar-bg{flex:1;height:3px;background:var(--border);border-radius:999px;overflow:hidden}
+.conf-bar-fill{height:100%;border-radius:999px;width:0%;transition:width 1.1s cubic-bezier(.22,1,.36,1)}
+.conf-bar-pct{font-family:'JetBrains Mono',monospace;font-size:.56rem;color:var(--text3);min-width:28px;text-align:right}
+.lab-meta{display:flex;flex-direction:column;gap:.3rem;padding-top:.4rem;border-top:1px solid var(--border)}
+.lab-meta-row{display:flex;justify-content:space-between;align-items:center;padding:.32rem 0;border-bottom:1px solid rgba(26,40,64,.5)}
+.lab-meta-row:last-child{border-bottom:none}
+.lmr-key{font-family:'JetBrains Mono',monospace;font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.lmr-val{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:700}
+.lmr-lime{color:var(--lime)} .lmr-blue{color:var(--blue)} .lmr-pink{color:var(--pink)}
+.conf-tier{display:inline-flex;align-items:center;gap:.3rem;font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:999px}
+.tier-high{background:rgba(184,240,0,.1);color:var(--lime);border:1px solid rgba(184,240,0,.25)}
+.tier-mid{background:rgba(0,229,255,.08);color:var(--blue);border:1px solid rgba(0,229,255,.2)}
+.tier-low{background:rgba(168,85,247,.1);color:var(--purple);border:1px solid rgba(168,85,247,.2)}
+.lab-reason{font-size:.77rem;color:var(--text2);line-height:1.68}
+.lab-reset{align-self:flex-start;font-family:'JetBrains Mono',monospace;font-size:.63rem;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid var(--border);color:var(--text3);padding:6px 14px;border-radius:999px;cursor:pointer;transition:all .2s}
+.lab-reset:hover{border-color:var(--pink);color:var(--pink)}
+
+/* ─────────────────────────── ALGO ENGINE ─────────────────────────── */
+.algo-section{background:linear-gradient(180deg,rgba(0,229,255,.03) 0%,transparent 100%);border-top:1px solid var(--border)}
+.algo-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;align-items:start}
+@media(max-width:860px){.algo-grid{grid-template-columns:1fr}}
+.algo-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:1.5rem}
+.panel-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--blue);margin-bottom:1.2rem;display:flex;align-items:center;gap:.4rem}
+.algo-step{display:grid;grid-template-columns:36px 1fr;gap:.7rem;padding:.85rem 0;border-bottom:1px solid var(--border);align-items:start}
+.algo-step:last-child{border-bottom:none}
+.step-num{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--text3);flex-shrink:0;transition:all .4s}
+.step-num.done{border-color:var(--lime);color:var(--lime);background:rgba(184,240,0,.07);box-shadow:0 0 12px rgba(184,240,0,.2)}
+.step-num.active{border-color:var(--blue);color:var(--blue);background:rgba(0,229,255,.07);animation:pulse-step .9s ease-in-out infinite}
+@keyframes pulse-step{0%,100%{box-shadow:0 0 0 0 rgba(0,229,255,.3)}50%{box-shadow:0 0 0 8px rgba(0,229,255,0)}}
+.step-body{display:flex;flex-direction:column;gap:.2rem}
+.step-name{font-size:.86rem;font-weight:700;color:var(--text)}
+.step-desc{font-family:'JetBrains Mono',monospace;font-size:.63rem;color:var(--text3);line-height:1.55}
+.step-result{font-family:'JetBrains Mono',monospace;font-size:.63rem;color:var(--blue);background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.15);border-radius:6px;padding:6px 10px;margin-top:.3rem;display:none}
+.step-result.show{display:block;animation:fade-up .35s ease forwards}
+.algo-output{display:flex;flex-direction:column;gap:1rem;position:sticky;top:72px}
+.output-card{
+  background:linear-gradient(145deg,rgba(13,20,32,.99),rgba(8,13,22,1));
+  border:1px solid var(--border2);border-radius:var(--r2);
+  padding:1.5rem;display:flex;flex-direction:column;gap:1rem;position:relative;overflow:hidden;
+}
+.output-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--lime),var(--purple))}
+.out-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);display:flex;align-items:center;gap:.4rem}
+.out-name{font-family:'Bebas Neue',sans-serif;font-size:1.65rem;letter-spacing:.04em;line-height:1.05;color:var(--text)}
+.gauge-row{display:flex;align-items:center;gap:1rem}
+.gauge-wrap{position:relative;width:72px;height:72px;flex-shrink:0}
+.gauge-svg{width:72px;height:72px;transform:rotate(-90deg)}
+.g-bg{fill:none;stroke:var(--border);stroke-width:5}
+.g-fg{fill:none;stroke:var(--lime);stroke-width:5;stroke-linecap:round;stroke-dasharray:188;transition:stroke-dashoffset 1.5s cubic-bezier(.22,1,.36,1)}
+.gauge-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column}
+.g-val{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--lime);line-height:1;filter:drop-shadow(0 0 8px rgba(184,240,0,.4))}
+.g-sub{font-family:'JetBrains Mono',monospace;font-size:.42rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.g-breakdown{flex:1;display:flex;flex-direction:column;gap:.4rem}
+.g-row{display:flex;justify-content:space-between;align-items:center;gap:.4rem}
+.g-lbl{font-family:'JetBrains Mono',monospace;font-size:.56rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+.g-bar{flex:1;height:3px;background:var(--border);border-radius:999px;overflow:hidden}
+.g-fill{height:100%;border-radius:999px;transition:width 1.2s ease;width:0%}
+.g-pct{font-family:'JetBrains Mono',monospace;font-size:.56rem;color:var(--text3);min-width:26px;text-align:right}
+.out-meta{display:flex;flex-direction:column;gap:.4rem}
+.out-row{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:.4rem;border-bottom:1px solid rgba(26,40,64,.6)}
+.out-row:last-child{border-bottom:none;padding-bottom:0}
+.out-key{font-family:'JetBrains Mono',monospace;font-size:.59rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.out-val{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:700;text-align:right;max-width:55%;line-height:1.5}
+.out-val.lime{color:var(--lime)} .out-val.blue{color:var(--blue)}
+.ldr-row{display:flex;align-items:center;gap:.7rem;padding:.42rem 0;border-bottom:1px solid rgba(26,40,64,.5)}
+.ldr-row:last-child{border-bottom:none}
+.ldr-rank{font-family:'Bebas Neue',sans-serif;font-size:1rem;min-width:18px}
+.ldr-kw{flex:1;font-size:.82rem;font-weight:600;color:var(--text)}
+.ldr-bar-bg{flex:1;height:3px;background:var(--border);border-radius:999px;overflow:hidden}
+.ldr-bar-fill{height:100%;border-radius:999px;transition:width .8s ease}
+.ldr-score{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--text3);min-width:26px;text-align:right}
+.algo-rerun{
+  display:flex;align-items:center;justify-content:center;gap:.6rem;
+  font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;
+  background:transparent;border:1px solid var(--border);color:var(--text3);
+  padding:10px 20px;border-radius:999px;cursor:pointer;transition:all .25s;width:100%;
+}
+.algo-rerun:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-glow)}
+.algo-rerun .spin{display:inline-block}
+.algo-rerun.running .spin{animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ─────────────────────────── TRENDING ─────────────────────────── */
+.trending-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:1.1rem}
+.trend-card{
+  background:linear-gradient(145deg,rgba(13,20,32,.98),rgba(8,13,22,.99));
+  border:1px solid var(--border2);border-radius:var(--r);
+  padding:1.4rem;display:flex;flex-direction:column;gap:.85rem;
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1),border-color .3s,box-shadow .3s;
+  animation:card-in .5s ease both;position:relative;overflow:hidden;
+}
+.trend-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--pink),var(--purple));opacity:0;transition:opacity .3s}
+.trend-card:hover{transform:translateY(-6px);border-color:rgba(255,61,130,.2);box-shadow:0 16px 48px rgba(0,0,0,.5),0 0 30px rgba(255,61,130,.05)}
+.trend-card:hover::after{opacity:1}
+.trend-header{display:flex;align-items:center;justify-content:space-between}
+.trend-plat{display:flex;align-items:center;gap:.4rem;font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--pink)}
+.trend-viral{font-family:'JetBrains Mono',monospace;font-size:.61rem;color:var(--text3)}
+.trend-name{font-size:.97rem;font-weight:700;line-height:1.3;color:var(--text)}
+.trend-desc{font-size:.8rem;color:var(--text2);line-height:1.65}
+.trend-bar-wrap{display:flex;flex-direction:column;gap:.3rem}
+.trend-bar-lbl{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:.59rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.bar-bg{height:4px;background:var(--border);border-radius:999px;overflow:hidden}
+.bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--pink),var(--purple));animation:bar-grow .9s ease both;transform-origin:left}
+@keyframes bar-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.trend-tags{display:flex;flex-wrap:wrap;gap:.3rem}
+.trend-tag{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.04em;padding:2px 8px;border-radius:999px;background:rgba(255,61,130,.08);color:var(--pink);border:1px solid rgba(255,61,130,.15)}
+.trend-views{font-family:'JetBrains Mono',monospace;font-size:.64rem;color:var(--text3)}
+
+/* ─────────────────────────── DROPS ─────────────────────────── */
+.drops-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.1rem}
+.drop-card{
+  background:linear-gradient(145deg,rgba(13,20,32,.98),rgba(8,13,22,.99));
+  border:1px solid var(--border2);border-radius:var(--r);
+  overflow:hidden;transition:transform .3s cubic-bezier(.34,1.56,.64,1),border-color .3s,box-shadow .3s;
+  animation:card-in .5s ease both;
+}
+.drop-card:hover{transform:translateY(-6px);border-color:rgba(0,229,255,.2);box-shadow:0 16px 48px rgba(0,0,0,.5),0 0 30px rgba(0,229,255,.04)}
+.drop-card-top{padding:1.2rem 1.3rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:.7rem}
+.conf-ring-wrap2{position:relative;width:56px;height:56px;margin-left:auto}
+.crs{width:56px;height:56px;transform:rotate(-90deg)}
+.cr2-bg{fill:none;stroke:var(--border);stroke-width:4}
+.cr2-fg{fill:none;stroke:var(--blue);stroke-width:4;stroke-linecap:round;stroke-dasharray:138;animation:ring-draw 1.2s ease forwards}
+@keyframes ring-draw{from{stroke-dashoffset:138}}
+.conf-lbl2{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--blue)}
+.drop-name{font-size:.95rem;font-weight:700;line-height:1.3;color:var(--text)}
+.drop-series{font-family:'JetBrains Mono',monospace;font-size:.6rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text3);margin-bottom:.3rem}
+.drop-body{padding:1rem 1.3rem 1.3rem;display:flex;flex-direction:column;gap:.7rem}
+.drop-row{display:flex;justify-content:space-between;align-items:center}
+.drop-key{font-family:'JetBrains Mono',monospace;font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.drop-val{font-size:.82rem;font-weight:700}
+.drop-val.blue{color:var(--blue)} .drop-val.lime{color:var(--lime)}
+.drop-signals{display:flex;flex-wrap:wrap;gap:.3rem}
+.drop-signal{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.04em;padding:2px 8px;border-radius:999px;background:rgba(0,229,255,.06);color:var(--blue);border:1px solid rgba(0,229,255,.18)}
+.drop-reason{font-size:.78rem;color:var(--text2);line-height:1.65;padding-top:.5rem;border-top:1px solid var(--border)}
+
+/* ─────────────────────────── FOOTER ─────────────────────────── */
+footer{
+  border-top:1px solid var(--border);
+  padding:2rem clamp(1rem,5vw,3rem);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;
+  background:var(--surface);
+}
+.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:.1em;color:var(--lime);filter:drop-shadow(0 0 8px rgba(184,240,0,.3))}
+.footer-copy{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)}
+
+@media(max-width:700px){
+  .nav-links{display:none}
+  .kpi-tile:nth-child(3),.kpi-tile:nth-child(4){display:none}
+  .sh{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<!-- SVG DEFS for gradients used in SVG elements -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="confGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b8f000"/>
+      <stop offset="100%" stop-color="#00e5ff"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-logo">BasedBW</div>
+  <div class="loader-track"><div class="loader-fill" id="loaderFill"></div></div>
+  <div class="loader-status">Scanning TikTok signals<span class="loader-dots"></span></div>
+</div>
+
+<!-- TOAST ZONE -->
+<div id="toastZone"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Based<span>BW</span></div>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#products" data-section="products">Products</a></li>
+    <li><a href="#keywords" data-section="keywords">Keywords</a></li>
+    <li><a href="#lab" data-section="lab">Lab</a></li>
+    <li><a href="#algorithm" data-section="algorithm">Algorithm</a></li>
+    <li><a href="#drops" data-section="drops">Drops</a></li>
+  </ul>
+  <div class="nav-right">
+    <span class="nav-time" id="navClock"></span>
+    <div class="nav-badge"><span class="badge-blink"></span> Live</div>
+  </div>
+</nav>
+
+<!-- KPI STRIP -->
+<div class="kpi-strip" id="kpiStrip">
+  <div class="kpi-tile">
+    <div class="kpi-label">Mentions Scanned</div>
+    <div class="kpi-val" id="kpiMentions">0</div>
+    <div class="kpi-delta">↑ +2.4K/min</div>
+  </div>
+  <div class="kpi-tile">
+    <div class="kpi-label">Keywords Tracked</div>
+    <div class="kpi-val" id="kpiKeywords">0</div>
+    <div class="kpi-delta">↑ 8 new today</div>
+  </div>
+  <div class="kpi-tile">
+    <div class="kpi-label">Viral Signals</div>
+    <div class="kpi-val" id="kpiSignals">0</div>
+    <div class="kpi-delta">↑ +3 this hour</div>
+  </div>
+  <div class="kpi-tile">
+    <div class="kpi-label">Predictions Today</div>
+    <div class="kpi-val" id="kpiPreds">0</div>
+    <div class="kpi-delta">↑ 94% accuracy</div>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero" id="hero">
+  <div class="hero-mesh"></div>
+  <div class="hero-grid"></div>
+  <div>
+    <div class="hero-eyebrow"><span class="dot-live"></span> Real-time TikTok × Bath &amp; Body Works Intelligence</div>
+    <h1>Based<span class="gradient-text">Bodyworks</span>Tracker</h1>
+    <p class="hero-sub">The only platform that reads TikTok's pulse and predicts Bath &amp; Body Works drops before they're announced. Type any keyword — get a prediction.</p>
+    <button class="hero-cta" onclick="document.getElementById('lab').scrollIntoView({behavior:'smooth'})">
+      ⚗️ &nbsp;Open Prediction Lab
+    </button>
+  </div>
+</div>
+
+<div class="marquee-wrap"><div class="marquee-track" id="marqueeTrack"></div></div>
+
+<!-- PRODUCTS -->
+<section class="sw reveal" id="products">
+  <div class="sh">
+    <div>
+      <div class="sl">Inventory Tracker</div>
+      <div class="st">Product <span class="gradient-accent">Catalog</span></div>
+    </div>
+    <div style="display:flex;gap:.7rem;align-items:center;flex-wrap:wrap">
+      <div class="search-wrap"><span class="search-icon">⌕</span><input class="search-input" id="searchInput" type="text" placeholder="Search products…"/></div>
+      <button class="see-all">View All</button>
+    </div>
+  </div>
+  <div class="filter-tabs" id="filterTabs">
+    <button class="tab active" data-filter="all">All</button>
+    <button class="tab" data-filter="candle">Candles</button>
+    <button class="tab" data-filter="body-care">Body Care</button>
+    <button class="tab" data-filter="fragrance">Fragrance</button>
+    <button class="tab" data-filter="hand-soap">Hand Soap</button>
+  </div>
+  <div class="product-grid" id="productGrid">
+    <!-- skeletons shown on load -->
+    <div class="skel-card"><div class="skeleton skel-img"></div><div class="skel-body"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w60"></div><div class="skeleton skel-line w40"></div></div></div>
+    <div class="skel-card"><div class="skeleton skel-img"></div><div class="skel-body"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w60"></div><div class="skeleton skel-line w40"></div></div></div>
+    <div class="skel-card"><div class="skeleton skel-img"></div><div class="skel-body"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w60"></div><div class="skeleton skel-line w40"></div></div></div>
+    <div class="skel-card"><div class="skeleton skel-img"></div><div class="skel-body"><div class="skeleton skel-line w80"></div><div class="skeleton skel-line w60"></div><div class="skeleton skel-line w40"></div></div></div>
+  </div>
+</section>
+
+<!-- KEYWORD INTELLIGENCE -->
+<section class="sw kw-section reveal" id="keywords">
+  <div class="sh">
+    <div><div class="sl">TikTok Signal Processing · Updated every 90s</div><div class="st">Keyword <span class="gradient-purple">Intelligence</span></div></div>
+    <button class="see-all">Export CSV</button>
+  </div>
+  <div class="live-feed">
+    <div class="live-label"><span class="feed-dot"></span>Live Events</div>
+    <div class="feed-scroll"><div class="feed-inner" id="feedInner"></div></div>
+  </div>
+  <div class="kw-grid" id="kwGrid"></div>
+</section>
+
+<!-- PREDICTION LAB -->
+<section class="sw lab-section reveal" id="lab">
+  <div class="sh">
+    <div><div class="sl">Dynamic Engine · Any keyword → product prediction</div><div class="st">Prediction <span class="gradient-accent">Lab</span></div></div>
+  </div>
+  <div class="lab-grid">
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      <div class="lab-input-panel">
+        <div class="lab-panel-label"><span class="lab-scan"></span> Enter any keyword to generate a prediction</div>
+        <div class="lab-input-row">
+          <input class="lab-input" id="labInput" type="text" placeholder="e.g. vanilla, cedar mist, rose body butter…" maxlength="60"/>
+          <button class="lab-go" id="labGoBtn">Generate</button>
+        </div>
+        <div class="lab-chips-label">Quick-fill trending keywords</div>
+        <div class="lab-chips" id="labChips"></div>
+      </div>
+      <div class="lab-input-panel">
+        <div class="lab-panel-label">How the name engine works</div>
+        <div class="lab-formula">
+          <div class="lab-formula-title">Product Name Formula</div>
+          <div class="formula-row">
+            <span class="formula-token ft-scent">Scent Anchor</span>
+            <span class="ft-plus">+</span>
+            <span class="formula-token ft-mod">Modifier</span>
+            <span class="ft-plus">+</span>
+            <span class="formula-token ft-type">Product Type</span>
+          </div>
+          <div class="formula-example">
+            <span style="color:var(--lime)">vanilla</span> → scent anchor detected<br>
+            <span style="color:var(--purple)">Luxe</span> → derived from confidence tier<br>
+            <span style="color:var(--blue)">Body Butter</span> → inferred from keyword signal<br>
+            → <strong style="color:var(--text)">"Vanilla Luxe Body Butter"</strong>
+          </div>
+        </div>
+        <div class="lab-formula">
+          <div class="lab-formula-title">Confidence Scoring Formula</div>
+          <div class="formula-example" style="line-height:1.9">
+            <span style="color:var(--lime)">mentions</span> × 0.35 +
+            <span style="color:var(--pink)">velocity</span> × 0.25 +<br>
+            <span style="color:var(--blue)">engagement</span> × 0.20 +
+            <span style="color:var(--purple)">searchLift</span> × 0.12 +<br>
+            <span style="color:var(--orange)">creatorPosts</span> × 0.08<br>
+            → Normalized to <strong style="color:var(--text)">52–96% range</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="lab-output-panel">
+      <div class="lab-result-card" id="labResultCard">
+        <div class="lab-idle" id="labIdle">
+          <div class="lab-idle-icon">⚗️</div>
+          <div class="lab-idle-text">Awaiting keyword input</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--text3);opacity:.5;margin-top:.3rem">Type above or click a chip to begin</div>
+        </div>
+        <div class="lab-result" id="labResult">
+          <div class="lab-result-eyebrow"><span class="scan-dot"></span> Generated prediction · <span id="labTimestamp">—</span></div>
+          <div class="lab-product-name" id="labProductName"></div>
+          <div class="conf-block">
+            <div class="conf-ring-wrap">
+              <svg class="conf-svg" viewBox="0 0 80 80">
+                <circle class="cr-bg" cx="40" cy="40" r="35"/>
+                <circle class="cr-fg" id="labRingFg" cx="40" cy="40" r="35" style="stroke-dashoffset:220"/>
+              </svg>
+              <div class="conf-label">
+                <div class="conf-pct" id="labConfPct">—</div>
+                <div class="conf-sub">Confidence</div>
+              </div>
+            </div>
+            <div class="conf-bars" id="labConfBars"></div>
+          </div>
+          <div class="lab-meta" id="labMeta"></div>
+          <div class="lab-reason" id="labReason"></div>
+          <button class="lab-reset" id="labReset">✕ Clear &amp; try another</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ALGORITHM ENGINE -->
+<section class="sw algo-section reveal" id="algorithm">
+  <div class="sh">
+    <div><div class="sl">Predictive AI · Keyword-to-Product Model v2.4</div><div class="st">The <span class="gradient-blue">Algorithm</span></div></div>
+    <button class="algo-rerun" id="algoBtn"><span class="spin">⟳</span>&nbsp; Re-run Analysis</button>
+  </div>
+  <div class="algo-grid">
+    <div class="algo-panel">
+      <div class="panel-label"><span class="scan-dot"></span> Processing pipeline</div>
+      <div id="algoSteps"></div>
+    </div>
+    <div class="algo-output">
+      <div class="output-card">
+        <div class="out-eyebrow"><span class="scan-dot"></span> Top Prediction · <span id="outTime">—</span></div>
+        <div class="out-name" id="outName">—</div>
+        <div class="gauge-row">
+          <div class="gauge-wrap">
+            <svg class="gauge-svg" viewBox="0 0 72 72">
+              <circle class="g-bg" cx="36" cy="36" r="30"/>
+              <circle class="g-fg" id="gaugeFg" cx="36" cy="36" r="30" style="stroke-dashoffset:188"/>
+            </svg>
+            <div class="gauge-label"><div class="g-val" id="gaugeVal">—</div><div class="g-sub">Score</div></div>
+          </div>
+          <div class="g-breakdown" id="gBreakdown"></div>
+        </div>
+        <div class="out-meta" id="outMeta"></div>
+      </div>
+      <div class="output-card">
+        <div class="out-eyebrow"><span class="scan-dot"></span> Keyword Ranking</div>
+        <div id="ldrList"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRENDING SIGNALS -->
+<section class="sw reveal" id="trending">
+  <div class="sh">
+    <div><div class="sl">Viral Intelligence</div><div class="st">Trending <span class="gradient-pink">Signals</span></div></div>
+    <button class="see-all">View All</button>
+  </div>
+  <div class="trending-grid" id="trendingGrid"></div>
+</section>
+
+<!-- PREDICTED DROPS -->
+<section class="sw reveal" id="drops">
+  <div class="sh">
+    <div><div class="sl">AI Forecast</div><div class="st">Predicted <span class="gradient-accent">Drops</span></div></div>
+    <button class="see-all">View All</button>
+  </div>
+  <div class="drops-grid" id="dropsGrid"></div>
+</section>
+
+<footer>
+  <div class="footer-logo">BasedBW</div>
+  <div class="footer-copy">© 2025 Based Bodyworks Tracker · Fan-made · Not affiliated with Bath &amp; Body Works</div>
+</footer>
+
+<script>
+/* ════════════════ DATA ════════════════ */
+const products=[
+  {id:1, name:"Mahogany Teakwood Intense",       cat:"candle",    price:16.95,status:"available",hype:94,img:"https://images.unsplash.com/photo-1603905904780-97fd8c7bdf1b?w=400&q=80&auto=format"},
+  {id:2, name:"Vanilla Bean Noel",               cat:"candle",    price:14.50,status:"soldout",  hype:99,img:"https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&q=80&auto=format"},
+  {id:3, name:"Japanese Cherry Blossom Lotion",  cat:"body-care", price:12.00,status:"available",hype:78,img:"https://images.unsplash.com/photo-1619451334792-150fd785ee74?w=400&q=80&auto=format"},
+  {id:4, name:"Eucalyptus Spearmint Body Scrub", cat:"body-care", price:18.50,status:"limited",  hype:85,img:"https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=400&q=80&auto=format"},
+  {id:5, name:"Watermelon Lemonade FFM",         cat:"fragrance", price:9.95, status:"restock",  hype:72,img:"https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=400&q=80&auto=format"},
+  {id:6, name:"Fresh Cut Lilacs 3-Wick",         cat:"candle",    price:24.50,status:"available",hype:61,img:"https://images.unsplash.com/photo-1567360425618-1594206637d2?w=400&q=80&auto=format"},
+  {id:7, name:"Gingham Gorgeous Body Mist",      cat:"fragrance", price:10.50,status:"soldout",  hype:88,img:"https://images.unsplash.com/photo-1541643600914-78b084683702?w=400&q=80&auto=format"},
+  {id:8, name:"Foaming Honey Shea Hand Soap",    cat:"hand-soap", price:6.50, status:"available",hype:55,img:"https://images.unsplash.com/photo-1584305574647-0cc949a2bb9f?w=400&q=80&auto=format"},
+  {id:9, name:"Champagne Toast Gift Set",        cat:"fragrance", price:34.00,status:"limited",  hype:91,img:"https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400&q=80&auto=format"},
+  {id:10,name:"Black Cherry Merlot 3-Wick",      cat:"candle",    price:24.50,status:"restock",  hype:80,img:"https://images.unsplash.com/photo-1598449456855-8fe3ada3fed2?w=400&q=80&auto=format"},
+  {id:11,name:"Coastal Sunset Body Polish",      cat:"body-care", price:15.95,status:"available",hype:66,img:"https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400&q=80&auto=format"},
+  {id:12,name:"Peach Bellini Hand Soap",         cat:"hand-soap", price:6.50, status:"soldout",  hype:74,img:"https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=400&q=80&auto=format"},
+];
+const keywords=[
+  {kw:"vanilla scent",    mentions:284700,vel:"+41% /hr",vClass:"v-fire",badge:"🔥 Exploding",bClass:"b-hot",   tags:["#VanillaTok","#ScentDump"],        plat:"TikTok · Instagram",hist:[120,138,155,160,175,198,220,251,284],t24:41,eng:92,sLift:380,posts:2840},
+  {kw:"body butter",      mentions:197300,vel:"+28% /hr",vClass:"v-fire",badge:"Trending",    bClass:"b-pink",  tags:["#BodyButter","#SkinCare"],         plat:"TikTok",            hist:[90,95,108,122,135,150,162,180,197], t24:28,eng:87,sLift:220,posts:1920},
+  {kw:"mahogany teakwood",mentions:163500,vel:"+19% /hr",vClass:"v-fire",badge:"Viral",       bClass:"b-purple",tags:["#MahoganyTeakwood","#ManCave"],    plat:"TikTok · YouTube",  hist:[100,105,112,118,125,138,145,155,163],t24:19,eng:94,sLift:174,posts:1440},
+  {kw:"cozy candle haul", mentions:141200,vel:"+22% /hr",vClass:"v-fire",badge:"🔥 Exploding",bClass:"b-hot",   tags:["#CandleHaul","#CozySzn"],          plat:"TikTok",            hist:[60,70,82,95,104,115,128,136,141], t24:22,eng:89,sLift:290,posts:1180},
+  {kw:"dupe fragrance",   mentions:118900,vel:"+15% /hr",vClass:"v-med", badge:"Rising",      bClass:"b-purple",tags:["#Dupe","#FragranceDupe"],          plat:"TikTok · Reddit",   hist:[70,74,80,87,92,98,106,113,118],   t24:15,eng:82,sLift:148,posts:990},
+  {kw:"self care routine",mentions:96400, vel:"+11% /hr",vClass:"v-med", badge:"Steady",      bClass:"b-purple",tags:["#SelfCare","#SkinCareTok"],        plat:"TikTok · Pinterest",hist:[65,68,72,76,80,84,88,92,96],      t24:11,eng:78,sLift:102,posts:820},
+  {kw:"shower routine",   mentions:74100, vel:"+8% /hr", vClass:"v-med", badge:"Rising",      bClass:"b-purple",tags:["#ShowerRoutine","#GRWM"],          plat:"TikTok",            hist:[50,53,56,59,63,66,69,72,74],      t24:8, eng:74,sLift:84, posts:640},
+  {kw:"sold out hunt",    mentions:62800, vel:"+18% /hr",vClass:"v-fire",badge:"Trending",    bClass:"b-pink",  tags:["#SoldOut","#BWHunt"],              plat:"TikTok",            hist:[28,33,38,44,50,54,58,61,62],      t24:18,eng:88,sLift:165,posts:520},
+];
+const liveFeedEvents=[
+  {kw:"vanilla scent",type:"spike",msg:"+1,240 mentions in 4 min"},
+  {kw:"body butter",type:"creator",msg:"@glowbabe posted (2.1M views)"},
+  {kw:"mahogany teakwood",type:"search",msg:"Search lift +22% on Google Trends"},
+  {kw:"sold out hunt",type:"spike",msg:"+890 mentions in 6 min"},
+  {kw:"cozy candle haul",type:"creator",msg:"@candlelover haul (980K views)"},
+  {kw:"dupe fragrance",type:"search",msg:"Reddit r/bathandbodyworks viral"},
+  {kw:"shower routine",type:"creator",msg:"@morningroutine GRWM (3.4M views)"},
+  {kw:"vanilla scent",type:"spike",msg:"Highest hourly count this week"},
+  {kw:"self care routine",type:"search",msg:"Pinterest saves +14% last hour"},
+  {kw:"body butter",type:"spike",msg:"+640 mentions — accelerating"},
+];
+const algoStepsData=[
+  {name:"Ingest TikTok Signals",   desc:"Pull mention counts, video engagement, hashtag velocity, and creator post rates from the last 24-hour window across all tracked keywords."},
+  {name:"Score Each Keyword",      desc:"Apply weighted formula: mentions × 0.35 + velocity × 0.25 + engagement × 0.20 + searchLift × 0.12 + creatorPosts × 0.08. Normalize to 0–100."},
+  {name:"Identify Top Signal",     desc:"Select keyword with highest composite score. Flag momentum as accelerating vs. plateauing based on sparkline trajectory."},
+  {name:"Cross-reference Catalog", desc:"Parse keyword for scent anchors and product-type signals. Match against semantic category map to determine product form."},
+  {name:"Generate Prediction",     desc:"Compose product name from scent + modifier + type. Calculate confidence and output drop timeline estimate."},
+];
+const trends=[
+  {plat:"TikTok",views:"42.1M",viral:97,name:"Mahogany Teakwood Dupes",  desc:"Creators testing every mahogany teakwood dupe — calling out which ones smell like the OG.",        tags:["#BWDupes","#MahoganyTeakwood","#CandleTok"],     growth:94},
+  {plat:"TikTok",views:"28.7M",viral:91,name:"Candle Haul Season",        desc:"Semi-annual sale haul tradition is exploding. Shoppers sharing 3-wick collections pre-sale.",     tags:["#CandleHaul","#BWsale","#HomeFragrance"],        growth:87},
+  {plat:"TikTok",views:"18.3M",viral:82,name:"Vanilla Bean Noel Hunt",    desc:"People camping stores the second VBN restocks every holiday season.",                              tags:["#VanillaBeanNoel","#HolidayBW","#SoldOut"],      growth:79},
+  {plat:"TikTok",views:"12.6M",viral:73,name:"Retired Scent Resale",      desc:"Discontinued BWW scents hitting Poshmark for 5-10x retail. A full market is forming.",            tags:["#DiscontinuedBW","#BWResale","#RareScentAlert"], growth:68},
+  {plat:"TikTok",views:"9.4M", viral:64,name:"JCB Everything Routine",   desc:"Japanese Cherry Blossom fans building full routines. The layering meta is real.",                  tags:["#JCB","#JapaneseCherryBlossom","#ScentLayering"],growth:61},
+  {plat:"TikTok",views:"6.1M", viral:55,name:"Hand Soap Aesthetic Shelf", desc:"Cottagecore-meets-BWW. Soaps displayed as bathroom decor, matching seasonal themes.",              tags:["#HandSoapAesthetic","#BWWDecor","#CottageCore"], growth:52},
+];
+const drops=[
+  {name:"Fireside Holiday 3-Wick Collection",  series:"Holiday 2025",  conf:91,eta:"Early Nov 2025",price:"$22–$26",signals:["Holiday 2024 sold 2M units","Fireside trending +340%","Influencer seeding detected"],reason:"Historical pattern shows Fireside drops the first Tuesday of November every year. TikTok seeding by 3 macro-influencers makes a restock nearly certain.",offset:12},
+  {name:"Coastal Rain Body Care Line",         series:"Spring Refresh", conf:78,eta:"Late Feb 2025", price:"$10–$18",signals:["SKU codes leaked","Spring 2024 same pattern","Coastal scents +220%"],              reason:"Leaked SKU codes matching coastal fragrance profiles appeared on the BWW internal app, consistent with a Spring Refresh lineup.",offset:30},
+  {name:"Champagne Toast Limited Bundle",      series:"New Year's Eve", conf:85,eta:"Dec 24, 2025",  price:"$38–$45",signals:["NYE bundle 3 yrs running","Top search term","Gift set demand +180%"],               reason:"Champagne Toast bundles have shipped every NYE for three consecutive years. Search volume is spiking 6 weeks earlier than prior years.",offset:21},
+  {name:"Watermelon Lemonade Summer Kit",      series:"Summer Splash",  conf:69,eta:"May 2025",       price:"$12–$20",signals:["Summer scent trending","Citrus cycle detected","Related SKU clearance"],             reason:"Citrus and fruity scents see a seasonal pivot every year. Competitor clearance of similar scents signals a market gap BWW will fill.",offset:43},
+  {name:"Eucalyptus Spa Retreat Set",          series:"Wellness Drop",  conf:74,eta:"Jan 2025",       price:"$28–$36",signals:["Wellness TikTok +500%","Spa aesthetics spike","NY resolutions cycle"],              reason:"The annual wellness pivot post-holiday predictably drives eucalyptus demand. 'Self care' + 'BWW' is already accelerating.",offset:36},
+  {name:"Black Cherry Merlot Holiday Restock", series:"Holiday Restock",conf:88,eta:"Oct 28, 2025",   price:"$24.50",signals:["#1 waitlisted candle","Sold out in 6 hrs","Supplier capacity confirmed"],            reason:"Black Cherry Merlot is the most waitlisted candle. 11 months of sustained social demand. Halloween-adjacent restock is nearly certain.",offset:17},
+];
+
+/* ════════════════ PREDICTION ENGINE (unchanged) ════════════════ */
+const SCENT_ANCHORS={vanilla:{d:"Vanilla",aff:["body-care","candle"]},cherry:{d:"Cherry",aff:["candle","fragrance"]},mahogany:{d:"Mahogany",aff:["candle","fragrance"]},teakwood:{d:"Teakwood",aff:["candle","fragrance"]},eucalyptus:{d:"Eucalyptus",aff:["body-care","fragrance"]},spearmint:{d:"Spearmint",aff:["body-care"]},mint:{d:"Mint",aff:["body-care","hand-soap"]},lavender:{d:"Lavender",aff:["body-care","candle"]},coconut:{d:"Coconut",aff:["body-care"]},rose:{d:"Rose",aff:["fragrance","body-care"]},peach:{d:"Peach",aff:["fragrance","body-care"]},citrus:{d:"Citrus",aff:["fragrance","candle"]},lemon:{d:"Lemon",aff:["fragrance","hand-soap"]},mango:{d:"Mango",aff:["body-care","fragrance"]},jasmine:{d:"Jasmine",aff:["fragrance","candle"]},cedar:{d:"Cedar",aff:["candle","fragrance"]},sandalwood:{d:"Sandalwood",aff:["candle","fragrance"]},amber:{d:"Amber",aff:["candle","fragrance"]},watermelon:{d:"Watermelon",aff:["fragrance","body-care"]},champagne:{d:"Champagne",aff:["fragrance"]},blossom:{d:"Blossom",aff:["fragrance","body-care"]},floral:{d:"Floral",aff:["fragrance","candle"]},fresh:{d:"Fresh",aff:["fragrance","candle"]},cozy:{d:"Cozy",aff:["candle"]},warm:{d:"Warm",aff:["candle","body-care"]},honey:{d:"Honey",aff:["body-care","hand-soap"]},shea:{d:"Shea",aff:["body-care"]},grapefruit:{d:"Grapefruit",aff:["fragrance","body-care"]},patchouli:{d:"Patchouli",aff:["candle","fragrance"]},bergamot:{d:"Bergamot",aff:["fragrance","candle"]},gardenia:{d:"Gardenia",aff:["fragrance","candle"]},pumpkin:{d:"Pumpkin",aff:["candle"]},cinnamon:{d:"Cinnamon",aff:["candle"]},apple:{d:"Apple",aff:["candle","fragrance"]},ocean:{d:"Ocean",aff:["fragrance","body-care"]},coastal:{d:"Coastal",aff:["fragrance","body-care"]},tropical:{d:"Tropical",aff:["body-care","fragrance"]},cotton:{d:"Cotton",aff:["candle","fragrance"]},cashmere:{d:"Cashmere",aff:["candle","fragrance"]}};
+const PRODUCT_TYPES={butter:{form:"Body Butter",cat:"body-care",price:[14,20]},lotion:{form:"Body Lotion",cat:"body-care",price:[12,16]},cream:{form:"Whipped Body Cream",cat:"body-care",price:[16,22]},scrub:{form:"Sugar Scrub",cat:"body-care",price:[16,20]},oil:{form:"Body Oil Serum",cat:"body-care",price:[14,18]},mist:{form:"Fine Fragrance Mist",cat:"fragrance",price:[10,14]},spray:{form:"Body Spray",cat:"fragrance",price:[10,14]},cologne:{form:"Cologne",cat:"fragrance",price:[16,22]},perfume:{form:"Eau de Parfum",cat:"fragrance",price:[20,30]},candle:{form:"3-Wick Candle",cat:"candle",price:[22,26]},wick:{form:"3-Wick Candle",cat:"candle",price:[22,26]},haul:{form:"Gift Set Collection",cat:"fragrance",price:[28,42]},set:{form:"Gift Set",cat:"fragrance",price:[28,38]},routine:{form:"Body Care Trio",cat:"body-care",price:[24,34]},ritual:{form:"Spa Body Kit",cat:"body-care",price:[24,32]},soap:{form:"Foaming Hand Soap",cat:"hand-soap",price:[6,9]},wash:{form:"Shower Gel",cat:"body-care",price:[12,16]},dupe:{form:"Signature Scent Mist",cat:"fragrance",price:[10,14]},hunt:{form:"Limited Edition Set",cat:"fragrance",price:[32,44]},scent:{form:"Fine Fragrance Mist",cat:"fragrance",price:[10,14]},fragrance:{form:"Eau de Parfum",cat:"fragrance",price:[18,28]},gel:{form:"Shower Gel",cat:"body-care",price:[12,16]},polish:{form:"Body Polish",cat:"body-care",price:[14,18]},serum:{form:"Glow Serum",cat:"body-care",price:[16,22]},trio:{form:"Body Care Trio",cat:"body-care",price:[24,32]}};
+const CAT_DEFAULTS={"body-care":{form:"Body Butter",price:[14,18]},fragrance:{form:"Fine Fragrance Mist",price:[10,14]},candle:{form:"3-Wick Candle",price:[22,26]},"hand-soap":{form:"Foaming Hand Soap",price:[6,9]}};
+const MODIFIERS={high:["Deluxe","Luxe","Signature","Intense","Indulgent","Prestige"],mid:["Essential","Rich","Velvet","Soft","Daily","Nourishing"],low:["Classic","Original","Core","Everyday","Simple"]};
+function titleCase(s){return s.replace(/\b\w/g,c=>c.toUpperCase())}
+function fmt(n){return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?Math.round(n/1e3)+'K':String(n)}
+function parseKeyword(kwString){
+  const words=kwString.toLowerCase().replace(/[^a-z\s]/g,'').split(/\s+/).filter(Boolean);
+  const anchors=[],seen=new Set();
+  for(const w of words)for(const[k,v]of Object.entries(SCENT_ANCHORS))if(!seen.has(k)&&(w===k||w.includes(k)||k.includes(w))){anchors.push(v);seen.add(k)}
+  let pt=null;
+  for(const w of words)if(PRODUCT_TYPES[w]){pt=PRODUCT_TYPES[w];break}
+  if(!pt){outer:for(const w of words)for(const[k,v]of Object.entries(PRODUCT_TYPES))if(w.length>3&&(w.includes(k)||k.includes(w))){pt=v;break outer}}
+  let cat="body-care";
+  if(anchors.length>0)cat=anchors[0].aff[0];
+  if(pt)cat=pt.cat;
+  if(!pt)pt={...CAT_DEFAULTS[cat],cat};
+  const sd=anchors.length>0?anchors.slice(0,2).map(a=>a.d).join(" "):titleCase(words.filter(w=>!PRODUCT_TYPES[w]&&w.length>2).slice(0,2).join(" "))||"Signature";
+  return{scentDisplay:sd,cat,productType:pt,anchors,words};
+}
+function calcConfidence(metrics){
+  const m=metrics||{};
+  const ms=Math.min(100,(m.mentions||0)/3000),vs=Math.min(100,(m.t24||0)*1.5),es=m.eng||65,ss=Math.min(100,(m.sLift||60)/4),ps=Math.min(100,(m.posts||300)/30);
+  const raw=ms*.35+vs*.25+es*.20+ss*.12+ps*.08;
+  return{confidence:Math.min(96,Math.max(52,Math.round(52+raw*.44))),scores:{momentum:Math.round(ms*.6+vs*.4),engagement:Math.round(es),searchLift:Math.round(ss),social:Math.round(ps)}};
+}
+function getModifier(conf,sd){
+  const t=conf>=88?MODIFIERS.high:conf>=72?MODIFIERS.mid:MODIFIERS.low;
+  return t[sd.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%t.length];
+}
+function buildEta(c){return c>=90?"1–2 weeks":c>=80?"2–3 weeks":c>=70?"3–5 weeks":"4–8 weeks"}
+function confTier(c){return c>=88?{label:"High Confidence",cls:"tier-high"}:c>=72?{label:"Moderate",cls:"tier-mid"}:{label:"Low Confidence",cls:"tier-low"}}
+function predictFromKeyword(kwString,metricsObj){
+  const{scentDisplay,cat,productType}=parseKeyword(kwString);
+  const metrics=metricsObj||{mentions:Math.floor(30000+Math.random()*60000),t24:Math.floor(8+Math.random()*18),eng:Math.floor(62+Math.random()*20),sLift:Math.floor(60+Math.random()*120),posts:Math.floor(200+Math.random()*600)};
+  const{confidence,scores}=calcConfidence(metrics);
+  const modifier=getModifier(confidence,scentDisplay);
+  const productName=`${scentDisplay} ${modifier} ${productType.form}`;
+  const priceRange=`$${productType.price[0]}–$${productType.price[1]}`;
+  const eta=buildEta(confidence);
+  const reason=`"${kwString}" generated ${fmt(metrics.mentions)} daily mentions with +${metrics.t24}% 24h velocity. Search lift of +${metrics.sLift}% signals rising consumer intent for ${productType.form.toLowerCase()} SKUs. The ${scentDisplay.toLowerCase()} scent cluster maps to ${cat.replace('-',' ')} — confidence of ${confidence}% reflects both current social momentum and BWW's historical launch cadence.`;
+  return{productName,cat,confidence,scores,priceRange,eta,reason,scentDisplay,productType,metrics};
+}
+function computeScore(k){return Math.round(k.mentions/3000*.35+k.t24*1.5*.25+k.eng*.20+k.sLift/4*.12+k.posts/30*.08)}
+
+/* ════════════════ LOADER ════════════════ */
+window.addEventListener('DOMContentLoaded',()=>{
+  const fill=document.getElementById('loaderFill');
+  requestAnimationFrame(()=>{fill.style.width='100%'});
+  setTimeout(()=>{
+    document.getElementById('loader').classList.add('gone');
+    // animate KPI counters after loader
+    animateKPI('kpiMentions',939200);
+    animateKPI('kpiKeywords',138);
+    animateKPI('kpiSignals',47);
+    animateKPI('kpiPreds',2418);
+    // reveal products
+    setTimeout(()=>renderProducts(products),200);
+  },2000);
+});
+
+/* ════════════════ CLOCK ════════════════ */
+function updateClock(){
+  const now=new Date();
+  document.getElementById('navClock').textContent=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+updateClock();setInterval(updateClock,1000);
+
+/* ════════════════ COUNTER ANIMATION ════════════════ */
+function animateKPI(id,target){
+  const el=document.getElementById(id);if(!el)return;
+  const dur=1400,step=16,steps=dur/step;
+  let cur=0,tick=0;
+  const iv=setInterval(()=>{
+    tick++;
+    // ease-out
+    const t=tick/steps;
+    cur=Math.round(target*(1-Math.pow(1-t,3)));
+    el.textContent=cur>=1000?cur.toLocaleString():cur;
+    if(tick>=steps){el.textContent=target>=1000?target.toLocaleString():target;clearInterval(iv);}
+  },step);
+}
+
+/* ════════════════ TOAST ════════════════ */
+const toastQueue=[];let toastBusy=false;
+const toastTemplates=[
+  ()=>({cls:'toast-lime',text:`vanilla scent +${Math.floor(Math.random()*800+200)} mentions`}),
+  ()=>({cls:'toast-pink',text:`body butter trending ↑ in ${Math.random()>.5?'US':'UK'}`}),
+  ()=>({cls:'toast-blue',text:`New prediction generated: mahogany cologne`}),
+  ()=>({cls:'toast-lime',text:`${Math.floor(Math.random()*5+1)} new haul videos uploaded`}),
+  ()=>({cls:'toast-pink',text:`sold out hunt velocity spike detected`}),
+  ()=>({cls:'toast-blue',text:`Search lift: cedar +${Math.floor(Math.random()*40+20)}%`}),
+];
+function showToast(cls,text){
+  const zone=document.getElementById('toastZone');
+  const t=document.createElement('div');
+  t.className=`toast ${cls}`;
+  t.innerHTML=`<span class="toast-dot"></span>${text}`;
+  zone.appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),400);},3200);
+}
+function randomToast(){
+  const tmpl=toastTemplates[Math.floor(Math.random()*toastTemplates.length)];
+  const{cls,text}=tmpl();
+  showToast(cls,text);
+}
+setInterval(randomToast,8000);
+
+/* ════════════════ MARQUEE ════════════════ */
+const mItems=["Vanilla Scent","Body Butter","Mahogany Teakwood","Cozy Candle Haul","Dupe Fragrance","Self Care Routine","Shower Routine","Sold Out Hunt","Japanese Cherry Blossom","Champagne Toast"];
+const mTrack=document.getElementById('marqueeTrack');
+[...mItems,...mItems,...mItems,...mItems].forEach(t=>{const s=document.createElement('span');s.className='marquee-item';s.innerHTML=t+'<span class="sep">✦</span>';mTrack.appendChild(s);});
+
+/* ════════════════ PRODUCTS ════════════════ */
+const statusMap={available:{cls:'status-available',lbl:'In Stock'},soldout:{cls:'status-soldout',lbl:'Sold Out'},limited:{cls:'status-limited',lbl:'Limited'},restock:{cls:'status-restock',lbl:'Restocking'}};
+function renderProducts(list){
+  const g=document.getElementById('productGrid');g.innerHTML='';
+  list.forEach((p,i)=>{
+    const s=statusMap[p.status],c=document.createElement('div');
+    c.className='product-card';c.style.animationDelay=`${i*.07}s`;
+    c.innerHTML=`<div class="card-shimmer"></div><div class="card-image-wrap"><img class="card-image" src="${p.img}" alt="${p.name}" loading="lazy"/><div class="card-status ${s.cls}">${s.lbl}</div></div><div class="card-body"><div class="card-category">${p.cat.replace('-',' ')}</div><div class="card-name">${p.name}</div><div class="card-footer"><div class="card-price">$${p.price.toFixed(2)}</div><div class="card-hype"><span class="hype-dot"></span>${p.hype}% hype</div></div></div>`;
+    g.appendChild(c);
+  });
+  observeAll();
+}
+document.getElementById('filterTabs').addEventListener('click',e=>{
+  const btn=e.target.closest('.tab');if(!btn)return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');
+  renderProducts(btn.dataset.filter==='all'?products:products.filter(p=>p.cat===btn.dataset.filter));
+});
+document.getElementById('searchInput').addEventListener('input',e=>{
+  const q=e.target.value.toLowerCase();
+  renderProducts(products.filter(p=>p.name.toLowerCase().includes(q)||p.cat.includes(q)));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('.tab[data-filter="all"]').classList.add('active');
+});
+
+/* ════════════════ SPARKLINES ════════════════ */
+function buildSparkline(svgEl,hist,color){
+  const W=svgEl.parentElement.clientWidth||220,H=44;
+  const mn=Math.min(...hist),mx=Math.max(...hist),range=mx-mn||1;
+  const pts=hist.map((v,i)=>[i/(hist.length-1)*W,H-((v-mn)/range)*(H-8)-4]);
+  const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  const df=[...pts,[W,H],[0,H]].map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')+'Z';
+  const last=pts[pts.length-1];
+  const id='s'+Math.random().toString(36).slice(2);
+  svgEl.innerHTML=`<defs><linearGradient id="g${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity=".3"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><path d="${df}" fill="url(#g${id})"/><path id="${id}" d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.5" fill="${color}" filter="drop-shadow(0 0 4px ${color})"/>`;
+  const line=svgEl.querySelector(`#${id}`);
+  if(line){const len=220;line.style.strokeDasharray=len;line.style.strokeDashoffset=len;requestAnimationFrame(()=>requestAnimationFrame(()=>{line.style.transition='stroke-dashoffset 1.2s ease';line.style.strokeDashoffset=0;}))}
+}
+
+/* ════════════════ KEYWORD CARDS ════════════════ */
+const topKw=[...keywords].sort((a,b)=>b.mentions-a.mentions)[0].kw;
+const sparkColors=['#b8f000','#ff3d82','#a855f7','#00e5ff','#ff7a1a','#b8f000','#ff3d82','#a855f7'];
+const kwGrid=document.getElementById('kwGrid');
+keywords.forEach((k,i)=>{
+  const isTop=k.kw===topKw;
+  const card=document.createElement('div');
+  card.className='kw-card'+(isTop?' top-kw':'');
+  card.style.animationDelay=`${i*.07}s`;
+  card.innerHTML=`<div class="kw-header"><span class="kw-badge ${k.bClass}">${k.badge}</span><span class="kw-rank${isTop?' gold':''}">#${i+1}</span></div><div class="kw-word">${k.kw}</div><div class="kw-count-row"><div class="kw-count" id="kwc_${i}">${fmt(k.mentions)}</div><div class="kw-count-label">mentions<br>today</div><span class="kw-vel ${k.vClass}">${k.vel}</span></div><svg class="kw-spark" id="kwSvg_${i}" viewBox="0 0 220 44" preserveAspectRatio="none"></svg><div class="kw-metrics"><div class="kw-metric"><div class="km-val up">+${k.t24}%</div><div class="km-key">24h growth</div></div><div class="kw-metric"><div class="km-val hot">${k.eng}%</div><div class="km-key">engagement</div></div><div class="kw-metric"><div class="km-val neu">+${k.sLift}%</div><div class="km-key">search lift</div></div></div><div class="kw-footer"><div class="kw-tags">${k.tags.map(t=>`<span class="kw-tag">${t}</span>`).join('')}</div><button class="predict-btn" data-kw="${k.kw}" data-idx="${i}">→ Predict</button></div>`;
+  kwGrid.appendChild(card);
+});
+setTimeout(()=>{keywords.forEach((k,i)=>{const svg=document.getElementById(`kwSvg_${i}`);if(svg)buildSparkline(svg,k.hist,sparkColors[i]);});},180);
+kwGrid.addEventListener('click',e=>{
+  const btn=e.target.closest('.predict-btn');if(!btn)return;
+  const kw=btn.dataset.kw;
+  document.getElementById('labInput').value=kw;
+  document.getElementById('lab').scrollIntoView({behavior:'smooth'});
+  setTimeout(()=>runLabPrediction(kw),700);
+});
+// live tick
+function tickMentions(){
+  keywords.forEach((k,i)=>{
+    const el=document.getElementById(`kwc_${i}`);if(!el)return;
+    k.mentions+=Math.floor(Math.random()*120+30);
+    el.textContent=fmt(k.mentions);
+    el.classList.add('tick');
+    setTimeout(()=>el.classList.remove('tick'),600);
+  });
+  const kpiEl=document.getElementById('kpiMentions');
+  if(kpiEl){const n=parseInt(kpiEl.textContent.replace(/,/g,''));kpiEl.textContent=(n+Math.floor(Math.random()*1200+400)).toLocaleString();}
+  const kpiP=document.getElementById('kpiPreds');
+  if(kpiP){const n=parseInt(kpiP.textContent.replace(/,/g,''));kpiP.textContent=(n+Math.floor(Math.random()*3+1)).toLocaleString();}
+}
+setInterval(tickMentions,3200);
+
+// live feed
+const feedInner=document.getElementById('feedInner');
+[...liveFeedEvents,...liveFeedEvents].forEach(ev=>{
+  const icon=ev.type==='spike'?'📈':ev.type==='creator'?'👤':'🔍';
+  const d=document.createElement('div');d.className='feed-event';
+  d.innerHTML=`${icon} <strong>${ev.kw}</strong> — <span class="khi">${ev.msg}</span>`;
+  feedInner.appendChild(d);
+});
+
+/* ════════════════ PREDICTION LAB ════════════════ */
+const labChips=document.getElementById('labChips');
+[...keywords.map(k=>k.kw),'lavender mist','cedar candle','rose body butter','honey soap'].forEach(kw=>{
+  const btn=document.createElement('button');btn.className='lab-chip';btn.textContent=kw;
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.lab-chip').forEach(c=>c.classList.remove('active-chip'));
+    btn.classList.add('active-chip');
+    document.getElementById('labInput').value=kw;
+    runLabPrediction(kw);
+  });
+  labChips.appendChild(btn);
+});
+let labRunning=false,twTimer=null;
+function typewrite(el,text,onDone){
+  clearInterval(twTimer);el.innerHTML='<span class="cursor"></span>';let i=0;
+  twTimer=setInterval(()=>{
+    if(i<=text.length){el.innerHTML=text.slice(0,i)+'<span class="cursor"></span>';i++;}
+    else{clearInterval(twTimer);el.textContent=text;if(onDone)onDone();}
+  },34);
+}
+function runLabPrediction(kw){
+  if(labRunning||!kw.trim())return;
+  labRunning=true;
+  const goBtn=document.getElementById('labGoBtn');goBtn.classList.add('busy');
+  const card=document.getElementById('labResultCard');card.classList.add('active-glow');
+  const liveKw=keywords.find(k=>k.kw.toLowerCase()===kw.toLowerCase().trim());
+  const metrics=liveKw?{mentions:liveKw.mentions,t24:liveKw.t24,eng:liveKw.eng,sLift:liveKw.sLift,posts:liveKw.posts}:null;
+  const pred=predictFromKeyword(kw.trim(),metrics);
+  const tier=confTier(pred.confidence);
+  document.getElementById('labIdle').style.display='none';
+  const resultEl=document.getElementById('labResult');resultEl.classList.add('visible');
+  document.getElementById('labTimestamp').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('labRingFg').style.strokeDashoffset=220;
+  document.getElementById('labConfPct').textContent='—';
+  document.getElementById('labConfBars').innerHTML='';
+  document.getElementById('labMeta').innerHTML='';
+  document.getElementById('labReason').textContent='';
+  typewrite(document.getElementById('labProductName'),pred.productName,()=>{
+    setTimeout(()=>{
+      document.getElementById('labRingFg').style.strokeDashoffset=220*(1-pred.confidence/100);
+      document.getElementById('labConfPct').textContent=pred.confidence+'%';
+    },80);
+    const barsEl=document.getElementById('labConfBars');
+    [['Momentum',pred.scores.momentum,'#b8f000'],['Engagement',pred.scores.engagement,'#ff3d82'],['Search',pred.scores.searchLift,'#00e5ff'],['Social',pred.scores.social,'#a855f7']].forEach(([l,v,c],bi)=>{
+      const row=document.createElement('div');row.className='conf-bar-row';
+      row.innerHTML=`<span class="conf-bar-lbl">${l}</span><div class="conf-bar-bg"><div class="conf-bar-fill" style="background:${c}"></div></div><span class="conf-bar-pct">${v}%</span>`;
+      barsEl.appendChild(row);
+      setTimeout(()=>row.querySelector('.conf-bar-fill').style.width=v+'%',150+bi*80);
+    });
+    document.getElementById('labMeta').innerHTML=`<div class="lab-meta-row"><span class="lmr-key">Category</span><span class="lmr-val">${pred.cat.replace('-',' ')}</span></div><div class="lab-meta-row"><span class="lmr-key">Est. Price</span><span class="lmr-val lmr-lime">${pred.priceRange}</span></div><div class="lab-meta-row"><span class="lmr-key">Drop Window</span><span class="lmr-val lmr-blue">${pred.eta}</span></div><div class="lab-meta-row"><span class="lmr-key">Trigger Keyword</span><span class="lmr-val">${kw.trim()}</span></div><div class="lab-meta-row"><span class="lmr-key">Confidence Tier</span><span class="lmr-val"><span class="conf-tier ${tier.cls}">${tier.label}</span></span></div>`;
+    setTimeout(()=>{
+      document.getElementById('labReason').textContent=pred.reason;
+      goBtn.classList.remove('busy');
+      labRunning=false;
+      showToast('toast-lime',`Prediction: "${pred.productName.slice(0,28)}…"`);
+    },300);
+  });
+}
+document.getElementById('labGoBtn').addEventListener('click',()=>{const v=document.getElementById('labInput').value.trim();if(v)runLabPrediction(v);});
+document.getElementById('labInput').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=e.target.value.trim();if(v)runLabPrediction(v);}});
+document.getElementById('labReset').addEventListener('click',()=>{
+  clearInterval(twTimer);
+  document.getElementById('labIdle').style.display='flex';
+  document.getElementById('labResult').classList.remove('visible');
+  document.getElementById('labInput').value='';
+  document.getElementById('labResultCard').classList.remove('active-glow');
+  document.querySelectorAll('.lab-chip').forEach(c=>c.classList.remove('active-chip'));
+  labRunning=false;document.getElementById('labGoBtn').classList.remove('busy');
+});
+
+/* ════════════════ ALGORITHM ════════════════ */
+let algoRunning=false;
+function pickTop(){return[...keywords].sort((a,b)=>computeScore(b)-computeScore(a))[0]}
+function buildSteps(){
+  const c=document.getElementById('algoSteps');c.innerHTML='';
+  algoStepsData.forEach((s,i)=>{const d=document.createElement('div');d.className='algo-step';d.innerHTML=`<div class="step-num" id="sn_${i}">${i+1}</div><div class="step-body"><div class="step-name">${s.name}</div><div class="step-desc">${s.desc}</div><div class="step-result" id="sr_${i}"></div></div>`;c.appendChild(d);});
+}
+function showAlgoOutput(top,pred){
+  const now=new Date();
+  document.getElementById('outTime').textContent=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('outName').textContent=pred.productName;
+  setTimeout(()=>{document.getElementById('gaugeFg').style.strokeDashoffset=188*(1-pred.confidence/100);},100);
+  document.getElementById('gaugeVal').textContent=pred.confidence+'%';
+  const bk=document.getElementById('gBreakdown');bk.innerHTML='';
+  [['Momentum',pred.scores.momentum,'#b8f000'],['Engagement',pred.scores.engagement,'#ff3d82'],['Search',pred.scores.searchLift,'#00e5ff'],['Social',pred.scores.social,'#a855f7']].forEach(([l,v,c])=>{
+    const r=document.createElement('div');r.className='g-row';
+    r.innerHTML=`<span class="g-lbl">${l}</span><div class="g-bar"><div class="g-fill" style="background:${c}"></div></div><span class="g-pct">${v}%</span>`;
+    bk.appendChild(r);setTimeout(()=>r.querySelector('.g-fill').style.width=v+'%',200);
+  });
+  document.getElementById('outMeta').innerHTML=`<div class="out-row"><span class="out-key">Trigger Keyword</span><span class="out-val blue">${top.kw}</span></div><div class="out-row"><span class="out-key">Category</span><span class="out-val">${pred.cat.replace('-',' ')}</span></div><div class="out-row"><span class="out-key">Price Estimate</span><span class="out-val lime">${pred.priceRange}</span></div><div class="out-row"><span class="out-key">Drop Window</span><span class="out-val blue">${pred.eta}</span></div><div class="out-row"><span class="out-key">Mention Volume</span><span class="out-val">${fmt(top.mentions)}/day</span></div><div class="out-row" style="border:none;padding:0"><span class="out-key" style="max-width:100%;line-height:1.65;font-size:.62rem;color:var(--text2)">${pred.reason}</span></div>`;
+}
+function buildLeaderboard(){
+  const sorted=[...keywords].sort((a,b)=>computeScore(b)-computeScore(a));
+  const ldr=document.getElementById('ldrList');ldr.innerHTML='';
+  const cols=['#b8f000','#ff3d82','#00e5ff','#a855f7','#ff7a1a'];
+  sorted.forEach((k,i)=>{
+    const sc=computeScore(k),col=cols[i]||'var(--text3)';
+    const r=document.createElement('div');r.className='ldr-row';
+    r.innerHTML=`<span class="ldr-rank" style="color:${i<3?col:'var(--text3)'}">${i+1}</span><span class="ldr-kw" style="font-weight:${i===0?700:500}">${k.kw}</span><div class="ldr-bar-bg"><div class="ldr-bar-fill" style="width:0%;background:${col}"></div></div><span class="ldr-score">${sc}</span>`;
+    ldr.appendChild(r);
+    setTimeout(()=>r.querySelector('.ldr-bar-fill').style.width=sc+'%',300+i*60);
+  });
+}
+const stepResults=[
+  ()=>`Ingested ${keywords.length} keywords · ${fmt(keywords.reduce((a,k)=>a+k.mentions,0))} total mentions · window: last 24h`,
+  ()=>{const t=pickTop();return`Top scorer: "${t.kw}" — composite ${computeScore(t)}/100 · momentum: ↑ accelerating`},
+  ()=>{const t=pickTop();return`Winner: "${t.kw}" · ${fmt(t.mentions)} mentions · +${t.t24}% velocity`},
+  ()=>{const t=pickTop();const{scentDisplay,productType}=parseKeyword(t.kw);return`Parsed: scent="${scentDisplay}" · type="${productType.form}"`},
+  ()=>{const t=pickTop();const p=predictFromKeyword(t.kw,{mentions:t.mentions,t24:t.t24,eng:t.eng,sLift:t.sLift,posts:t.posts});return`Generated: "${p.productName}" · confidence ${p.confidence}%`},
+];
+function runAlgo(animated=true){
+  if(algoRunning)return;algoRunning=true;
+  const btn=document.getElementById('algoBtn');btn.classList.add('running');
+  buildSteps();
+  document.getElementById('gaugeFg').style.strokeDashoffset=188;
+  document.getElementById('gaugeVal').textContent='—';
+  document.getElementById('outName').textContent='Analyzing…';
+  document.getElementById('gBreakdown').innerHTML='';
+  document.getElementById('outMeta').innerHTML='';
+  const delay=animated?700:0;
+  algoStepsData.forEach((_,i)=>{
+    setTimeout(()=>{
+      if(i>0){const p=document.getElementById(`sn_${i-1}`);if(p){p.className='step-num done';p.textContent='✓';}}
+      const n=document.getElementById(`sn_${i}`);if(n)n.className='step-num active';
+      const r=document.getElementById(`sr_${i}`);if(r){r.textContent=stepResults[i]();r.classList.add('show');}
+      if(i===algoStepsData.length-1){
+        setTimeout(()=>{
+          const l=document.getElementById(`sn_${i}`);if(l){l.className='step-num done';l.textContent='✓';}
+          const top=pickTop();
+          showAlgoOutput(top,predictFromKeyword(top.kw,{mentions:top.mentions,t24:top.t24,eng:top.eng,sLift:top.sLift,posts:top.posts}));
+          buildLeaderboard();btn.classList.remove('running');algoRunning=false;
+        },animated?500:0);
+      }
+    },i*delay);
+  });
+}
+buildSteps();runAlgo(false);
+document.getElementById('algoBtn').addEventListener('click',()=>runAlgo(true));
+
+/* ════════════════ TRENDING ════════════════ */
+const tGrid=document.getElementById('trendingGrid');
+trends.forEach((t,i)=>{
+  const c=document.createElement('div');c.className='trend-card';c.style.animationDelay=`${i*.08}s`;
+  c.innerHTML=`<div class="trend-header"><div class="trend-plat">♪ ${t.plat}</div><div class="trend-viral">🔥 ${t.viral}% Viral</div></div><div class="trend-name">${t.name}</div><div class="trend-desc">${t.desc}</div><div class="trend-bar-wrap"><div class="trend-bar-lbl"><span>Growth</span><span>+${t.growth}%</span></div><div class="bar-bg"><div class="bar-fill" style="width:${t.growth}%;animation-delay:${i*.1}s"></div></div></div><div class="trend-tags">${t.tags.map(tg=>`<span class="trend-tag">${tg}</span>`).join('')}</div><div class="trend-views">👁 ${t.views} views</div>`;
+  tGrid.appendChild(c);
+});
+
+/* ════════════════ DROPS ════════════════ */
+const dGrid=document.getElementById('dropsGrid');
+drops.forEach((d,i)=>{
+  const off=138*(1-d.conf/100);const c=document.createElement('div');
+  c.className='drop-card';c.style.animationDelay=`${i*.09}s`;
+  c.innerHTML=`<div class="drop-card-top"><div><div class="drop-series">${d.series}</div><div class="drop-name">${d.name}</div></div><div class="conf-ring-wrap2"><svg class="crs" viewBox="0 0 56 56"><circle class="cr2-bg" cx="28" cy="28" r="22"/><circle class="cr2-fg" cx="28" cy="28" r="22" style="stroke-dashoffset:${off};animation-delay:${i*.12}s"/></svg><div class="conf-lbl2">${d.conf}%</div></div></div><div class="drop-body"><div class="drop-row"><span class="drop-key">ETA</span><span class="drop-val blue">${d.eta}</span></div><div class="drop-row"><span class="drop-key">Est. Price</span><span class="drop-val lime">${d.price}</span></div><div class="drop-signals">${d.signals.map(s=>`<span class="drop-signal">${s}</span>`).join('')}</div><div class="drop-reason">${d.reason}</div></div>`;
+  dGrid.appendChild(c);
+});
+
+/* ════════════════ SCROLL REVEALS + NAV ACTIVE ════════════════ */
+const revealObs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in');}),{threshold:.08});
+document.querySelectorAll('.reveal').forEach(el=>revealObs.observe(el));
+
+const cardObs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.style.animationPlayState='running';}),{threshold:.06});
+function observeAll(){document.querySelectorAll('.product-card,.trend-card,.drop-card,.kw-card').forEach(el=>{el.style.animationPlayState='paused';cardObs.observe(el);});}
+observeAll();
+
+// Active nav link on scroll
+const sections=['products','keywords','lab','algorithm','trending','drops'];
+const navObs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      document.querySelectorAll('.nav-links a').forEach(a=>{
+        a.classList.toggle('active',a.dataset.section===e.target.id);
+      });
+    }
+  });
+},{threshold:.3});
+sections.forEach(id=>{const el=document.getElementById(id);if(el)navObs.observe(el);});
+</script>
+</body>
+</html>
