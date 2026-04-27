@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>How It Was Built · Based Bodyworks Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#05080f;--bg2:#080d16;--surface:#0d1420;
+  --border:#1a2840;--border2:rgba(255,255,255,.06);
+  --lime:#b8f000;--pink:#ff3d82;--blue:#00e5ff;--purple:#a855f7;--orange:#ff7a1a;
+  --text:#dde6f0;--text2:#8da0b8;--text3:#4a6080;
+  --r:12px;--r2:18px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;line-height:1.6}
+a{text-decoration:none;color:inherit}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* NAV */
+nav{
+  position:sticky;top:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 clamp(1rem,5vw,3rem);height:60px;
+  background:rgba(5,8,15,.9);backdrop-filter:blur(28px);
+  border-bottom:1px solid var(--border2);
+}
+nav::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--purple),transparent);opacity:.4}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.1em;color:var(--lime);filter:drop-shadow(0 0 12px rgba(184,240,0,.4))}
+.nav-logo span{color:var(--text)}
+.nav-links{display:flex;gap:1.5rem;list-style:none}
+.nav-links a{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);transition:color .2s}
+.nav-links a:hover{color:var(--lime)}
+.nav-links a.active{color:var(--purple)}
+.nav-badge{display:flex;align-items:center;gap:.4rem;background:rgba(168,85,247,.12);color:var(--purple);font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:700;padding:5px 12px;border-radius:999px;letter-spacing:.08em;border:1px solid rgba(168,85,247,.3)}
+
+/* HERO */
+.page-hero{
+  position:relative;padding:5rem clamp(1rem,5vw,3rem) 4rem;
+  text-align:center;overflow:hidden;
+  background:radial-gradient(ellipse 70% 60% at 50% 0%,rgba(168,85,247,.08) 0%,transparent 70%);
+  border-bottom:1px solid var(--border);
+}
+.hero-grid{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(26,40,64,.4) 1px,transparent 1px),linear-gradient(90deg,rgba(26,40,64,.4) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 80% 100% at 50% 0%,black 20%,transparent 100%)}
+.page-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.25em;text-transform:uppercase;color:var(--purple);margin-bottom:1rem;opacity:0;animation:fade-up .6s .1s ease forwards}
+.page-hero h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(3rem,8vw,6rem);line-height:.92;letter-spacing:.03em;opacity:0;animation:fade-up .7s .25s ease forwards}
+.grad-purple{background:linear-gradient(135deg,var(--purple),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.page-sub{max-width:540px;margin:1.4rem auto 0;font-size:.95rem;color:var(--text2);line-height:1.75;opacity:0;animation:fade-up .7s .4s ease forwards}
+.back-btn{display:inline-flex;align-items:center;gap:.4rem;margin-top:2rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);border:1px solid var(--border);padding:8px 18px;border-radius:999px;transition:all .2s;opacity:0;animation:fade-up .7s .5s ease forwards}
+.back-btn:hover{border-color:var(--lime);color:var(--lime)}
+@keyframes fade-up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+/* STATS ROW */
+.stats-row{display:flex;justify-content:center;gap:0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface)}
+.stat-tile{flex:1;max-width:200px;padding:1.2rem;text-align:center;border-right:1px solid var(--border)}
+.stat-tile:last-child{border-right:none}
+.stat-n{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.04em;line-height:1}
+.stat-tile:nth-child(1) .stat-n{color:var(--lime)}
+.stat-tile:nth-child(2) .stat-n{color:var(--purple)}
+.stat-tile:nth-child(3) .stat-n{color:var(--blue)}
+.stat-tile:nth-child(4) .stat-n{color:var(--pink)}
+.stat-lbl{font-family:'JetBrains Mono',monospace;font-size:.58rem;text-transform:uppercase;letter-spacing:.15em;color:var(--text3);margin-top:.2rem}
+
+/* MAIN LAYOUT */
+.page-wrap{max-width:900px;margin:0 auto;padding:4rem clamp(1rem,5vw,2.5rem)}
+
+/* TIMELINE */
+.timeline{display:flex;flex-direction:column;gap:0;position:relative}
+.timeline::before{content:'';position:absolute;left:23px;top:0;bottom:0;width:1px;background:linear-gradient(to bottom,var(--purple),var(--blue),var(--lime),var(--pink));opacity:.25}
+
+.prompt-block{display:grid;grid-template-columns:48px 1fr;gap:1.5rem;padding-bottom:3.5rem;position:relative;opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.prompt-block.in{opacity:1;transform:translateY(0)}
+
+/* step circle */
+.step-circle{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;flex-shrink:0;position:relative;z-index:1;border:2px solid}
+.step-circle.c1{background:rgba(184,240,0,.1);border-color:rgba(184,240,0,.4);color:var(--lime)}
+.step-circle.c2{background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.4);color:var(--purple)}
+.step-circle.c3{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.4);color:var(--blue)}
+.step-circle.c4{background:rgba(255,61,130,.1);border-color:rgba(255,61,130,.4);color:var(--pink)}
+.step-circle.c5{background:rgba(255,122,26,.1);border-color:rgba(255,122,26,.4);color:var(--orange)}
+
+/* card */
+.prompt-card{
+  background:linear-gradient(145deg,rgba(13,20,32,.98),rgba(8,13,22,.99));
+  border:1px solid var(--border2);border-radius:var(--r2);
+  overflow:hidden;
+}
+.prompt-card-top{padding:1.5rem 1.6rem 1.2rem;border-bottom:1px solid var(--border)}
+.prompt-number{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+.prompt-number::before{content:'';flex:0 0 24px;height:1px}
+.pn1{color:var(--lime)} .pn1::before{background:var(--lime)}
+.pn2{color:var(--purple)} .pn2::before{background:var(--purple)}
+.pn3{color:var(--blue)} .pn3::before{background:var(--blue)}
+.pn4{color:var(--pink)} .pn4::before{background:var(--pink)}
+.pn5{color:var(--orange)} .pn5::before{background:var(--orange)}
+
+.prompt-title{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.03em;line-height:1.05;margin-bottom:.7rem}
+.prompt-text{
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;line-height:1.75;
+  color:var(--text2);
+  background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:var(--r);
+  padding:1rem 1.1rem;
+  position:relative;
+}
+.prompt-text::before{content:'"';position:absolute;top:.4rem;left:.6rem;font-family:'Plus Jakarta Sans',sans-serif;font-size:2rem;color:var(--border);line-height:1}
+.prompt-text-inner{padding-left:.8rem}
+
+/* what it did */
+.prompt-body{padding:1.4rem 1.6rem}
+.what-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--text3);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.what-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.what-desc{font-size:.9rem;color:var(--text2);line-height:1.8;margin-bottom:1.2rem}
+
+/* feature tags */
+.feature-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.4rem}
+.fc{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.06em;padding:4px 11px;border-radius:999px;border:1px solid}
+.fc-lime{background:rgba(184,240,0,.08);color:var(--lime);border-color:rgba(184,240,0,.2)}
+.fc-purple{background:rgba(168,85,247,.08);color:var(--purple);border-color:rgba(168,85,247,.2)}
+.fc-blue{background:rgba(0,229,255,.08);color:var(--blue);border-color:rgba(0,229,255,.2)}
+.fc-pink{background:rgba(255,61,130,.08);color:var(--pink);border-color:rgba(255,61,130,.2)}
+.fc-orange{background:rgba(255,122,26,.08);color:var(--orange);border-color:rgba(255,122,26,.2)}
+
+/* detail bullets */
+.detail-list{display:flex;flex-direction:column;gap:.5rem}
+.detail-item{display:flex;gap:.7rem;align-items:flex-start;font-size:.84rem;color:var(--text2);line-height:1.6}
+.detail-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:.5rem}
+.dd-lime{background:var(--lime);box-shadow:0 0 5px var(--lime)}
+.dd-purple{background:var(--purple);box-shadow:0 0 5px var(--purple)}
+.dd-blue{background:var(--blue);box-shadow:0 0 5px var(--blue)}
+.dd-pink{background:var(--pink);box-shadow:0 0 5px var(--pink)}
+.dd-orange{background:var(--orange);box-shadow:0 0 5px var(--orange)}
+
+/* result bar */
+.result-bar{display:flex;align-items:center;gap:.75rem;margin-top:1.2rem;padding:.85rem 1rem;border-radius:var(--r);border:1px solid}
+.rb-lime{background:rgba(184,240,0,.05);border-color:rgba(184,240,0,.2)}
+.rb-purple{background:rgba(168,85,247,.05);border-color:rgba(168,85,247,.2)}
+.rb-blue{background:rgba(0,229,255,.05);border-color:rgba(0,229,255,.2)}
+.rb-pink{background:rgba(255,61,130,.05);border-color:rgba(255,61,130,.2)}
+.rb-orange{background:rgba(255,122,26,.05);border-color:rgba(255,122,26,.2)}
+.rb-icon{font-size:1.1rem;flex-shrink:0}
+.rb-text{font-family:'JetBrains Mono',monospace;font-size:.68rem;line-height:1.5;color:var(--text2)}
+.rb-text strong{display:block;margin-bottom:.1rem}
+
+/* FOOTER */
+.page-footer{border-top:1px solid var(--border);padding:2rem clamp(1rem,5vw,3rem);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:var(--surface)}
+.footer-logo{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:.1em;color:var(--lime);filter:drop-shadow(0 0 8px rgba(184,240,0,.3))}
+.footer-copy{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)}
+
+@media(max-width:640px){.nav-links{display:none}.stats-row{flex-wrap:wrap}.stat-tile{min-width:50%}.timeline::before{display:none}.prompt-block{grid-template-columns:1fr}.step-circle{display:none}}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">Based<span>BW</span></a>
+  <ul class="nav-links">
+    <li><a href="index.html">← Back to Dashboard</a></li>
+    <li><a href="index.html#lab">Prediction Lab</a></li>
+    <li><a href="index.html#algorithm">Algorithm</a></li>
+    <li><a href="process.html" class="active">How It Was Built</a></li>
+  </ul>
+  <div class="nav-badge">⚙ Build Log</div>
+</nav>
+
+<!-- HERO -->
+<div class="page-hero">
+  <div class="hero-grid"></div>
+  <div class="page-eyebrow">⚙ Developer Build Log · Claude + Human collaboration</div>
+  <h1>How It Was<br><span class="grad-purple">Built</span></h1>
+  <p class="page-sub">Every prompt used to build this dashboard, what it asked for, and what got added to the site as a result — from first idea to deployed product.</p>
+  <a href="index.html" class="back-btn">← View the Dashboard</a>
+</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat-tile"><div class="stat-n">5</div><div class="stat-lbl">Prompts Used</div></div>
+  <div class="stat-tile"><div class="stat-n">1,300+</div><div class="stat-lbl">Lines of Code</div></div>
+  <div class="stat-tile"><div class="stat-n">1</div><div class="stat-lbl">HTML File</div></div>
+  <div class="stat-tile"><div class="stat-n">0</div><div class="stat-lbl">Frameworks Used</div></div>
+</div>
+
+<!-- TIMELINE -->
+<div class="page-wrap">
+  <div class="timeline" id="timeline">
+
+    <!-- PROMPT 1 -->
+    <div class="prompt-block">
+      <div class="step-circle c1">1</div>
+      <div class="prompt-card">
+        <div class="prompt-card-top">
+          <div class="prompt-number pn1">Prompt 01 · Initial Build</div>
+          <div class="prompt-title">Create the Base Site</div>
+          <div class="prompt-text">
+            <div class="prompt-text-inner">
+              Create a modern responsive website called "Based Bodyworks Tracker". Features: Homepage with product cards (name, price, image, status), Section called "Trending Signals" (simulate TikTok trends), Section called "Predicted Drops" showing likely upcoming products, Clean UI with cards and animations. Tech: HTML, CSS, JavaScript only. Use mock/sample data (no real APIs). Also explain how to run it locally.
+            </div>
+          </div>
+        </div>
+        <div class="prompt-body">
+          <div class="what-label">What this built</div>
+          <div class="what-desc">
+            This single prompt created the entire foundation — a fully working, self-contained HTML file with three sections, real mock data, interactive filtering, and animations. No framework, no build step, no dependencies.
+          </div>
+          <div class="feature-chips">
+            <span class="fc fc-lime">Product Grid</span>
+            <span class="fc fc-lime">Category Filter Tabs</span>
+            <span class="fc fc-lime">Search Bar</span>
+            <span class="fc fc-lime">Trending Signals Cards</span>
+            <span class="fc fc-lime">Predicted Drops + Confidence Rings</span>
+            <span class="fc fc-lime">Hero Section</span>
+            <span class="fc fc-lime">Scrolling Marquee</span>
+            <span class="fc fc-lime">Sticky Nav</span>
+            <span class="fc fc-lime">Card Hover Animations</span>
+          </div>
+          <div class="detail-list">
+            <div class="detail-item"><span class="detail-dot dd-lime"></span>12 product cards with images from Unsplash, each showing status badges (In Stock, Sold Out, Limited, Restocking) and a hype percentage</div>
+            <div class="detail-item"><span class="detail-dot dd-lime"></span>6 TikTok trend cards with viral scores, hashtag chips, growth progress bars, and view counts</div>
+            <div class="detail-item"><span class="detail-dot dd-lime"></span>6 predicted drop cards with animated SVG confidence ring gauges and signal tags</div>
+            <div class="detail-item"><span class="detail-dot dd-lime"></span>CSS-only animations: staggered card reveals, fade-up keyframes, IntersectionObserver for scroll-triggered entrance</div>
+          </div>
+          <div class="result-bar rb-lime">
+            <span class="rb-icon">✅</span>
+            <div class="rb-text"><strong>Result: Full working website</strong>A complete three-section dashboard in a single HTML file, runnable by opening in any browser with zero setup.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 2 -->
+    <div class="prompt-block">
+      <div class="step-circle c2">2</div>
+      <div class="prompt-card">
+        <div class="prompt-card-top">
+          <div class="prompt-number pn2">Prompt 02 · TikTok Intelligence Layer</div>
+          <div class="prompt-title">Make It Look Like It Analyzes TikTok</div>
+          <div class="prompt-text">
+            <div class="prompt-text-inner">
+              Enhance the site so it looks like it analyzes TikTok trends: Add a section showing trending keywords (e.g. "vanilla scent", "body butter"), Add fake metrics like "mentions increasing", Add a simple algorithm that picks the most trending keyword and predicts a product. Make it visually appealing.
+            </div>
+          </div>
+        </div>
+        <div class="prompt-body">
+          <div class="what-label">What this built</div>
+          <div class="what-desc">
+            Added two entirely new sections and a live data simulation layer. The site now looks like a real analytics product — keyword cards tick up in real time, a live events feed scrolls automatically, and the Algorithm section walks through a 5-step processing pipeline.
+          </div>
+          <div class="feature-chips">
+            <span class="fc fc-purple">Keyword Intelligence Section</span>
+            <span class="fc fc-purple">8 Keyword Cards</span>
+            <span class="fc fc-purple">Live Mention Ticker</span>
+            <span class="fc fc-purple">Animated Sparkline Charts</span>
+            <span class="fc fc-purple">Live Events Feed</span>
+            <span class="fc fc-purple">Algorithm Pipeline UI</span>
+            <span class="fc fc-purple">Keyword Leaderboard</span>
+          </div>
+          <div class="detail-list">
+            <div class="detail-item"><span class="detail-dot dd-purple"></span>Mention counts update every 3.2 seconds with a green flash animation — creates the illusion of a live data stream</div>
+            <div class="detail-item"><span class="detail-dot dd-purple"></span>SVG sparklines drawn in JavaScript with animated stroke-dashoffset line-draw effect and gradient area fills</div>
+            <div class="detail-item"><span class="detail-dot dd-purple"></span>Algorithm panel shows 5 steps activating in sequence with a pulsing blue indicator, each revealing its computed output text</div>
+            <div class="detail-item"><span class="detail-dot dd-purple"></span>computeScore() function weights mentions, velocity, engagement, search lift, and creator posts to rank keywords</div>
+          </div>
+          <div class="result-bar rb-purple">
+            <span class="rb-icon">📊</span>
+            <div class="rb-text"><strong>Result: Analytics dashboard feel</strong>The site crossed from "cool website" to "legit data product" — keywords pulse, feeds scroll, and the algorithm visibly thinks.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 3 -->
+    <div class="prompt-block">
+      <div class="step-circle c3">3</div>
+      <div class="prompt-card">
+        <div class="prompt-card-top">
+          <div class="prompt-number pn3">Prompt 03 · Dynamic Prediction Engine</div>
+          <div class="prompt-title">Generate Product Names From Any Keyword</div>
+          <div class="prompt-text">
+            <div class="prompt-text-inner">
+              Add JavaScript logic: If a keyword trend is high, generate a predicted product name. Example: "vanilla" → "Vanilla Body Butter". Display a confidence percentage. Make it dynamic.
+            </div>
+          </div>
+        </div>
+        <div class="prompt-body">
+          <div class="what-label">What this built</div>
+          <div class="what-desc">
+            Replaced every hardcoded product prediction with a fully algorithmic engine. No lookup tables — just pure composable logic that works on any keyword string. Also added the interactive Prediction Lab where users can type anything and get a real generated prediction.
+          </div>
+          <div class="feature-chips">
+            <span class="fc fc-blue">Prediction Lab Section</span>
+            <span class="fc fc-blue">parseKeyword() function</span>
+            <span class="fc fc-blue">calcConfidence() formula</span>
+            <span class="fc fc-blue">getModifier() picker</span>
+            <span class="fc fc-blue">Typewriter Animation</span>
+            <span class="fc fc-blue">Animated Confidence Ring</span>
+            <span class="fc fc-blue">Quick-fill Chips</span>
+            <span class="fc fc-blue">→ Predict buttons on cards</span>
+          </div>
+          <div class="detail-list">
+            <div class="detail-item"><span class="detail-dot dd-blue"></span><strong>parseKeyword():</strong> tokenizes any string, scans against 40 scent anchors (vanilla, cedar, rose…) and 25 product-type signals (butter, mist, candle…) to extract the product form</div>
+            <div class="detail-item"><span class="detail-dot dd-blue"></span><strong>calcConfidence():</strong> weighted formula — mentions × 0.35 + velocity × 0.25 + engagement × 0.20 + searchLift × 0.12 + creatorPosts × 0.08 — normalized to 52–96%</div>
+            <div class="detail-item"><span class="detail-dot dd-blue"></span><strong>getModifier():</strong> picks a deterministic adjective (Deluxe, Luxe, Signature, Essential…) based on confidence tier and a hash of the scent string — same keyword always gives the same modifier</div>
+            <div class="detail-item"><span class="detail-dot dd-blue"></span>Product name is assembled as: Scent Anchor + Modifier + Product Type — e.g. "Cedar Signature 3-Wick Candle"</div>
+          </div>
+          <div class="result-bar rb-blue">
+            <span class="rb-icon">⚗️</span>
+            <div class="rb-text"><strong>Result: Fully dynamic — works on any keyword</strong>Type "bergamot scrub", "pumpkin candle", or "ocean cologne" — the engine handles it all without any prewritten answers.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 4 -->
+    <div class="prompt-block">
+      <div class="step-circle c4">4</div>
+      <div class="prompt-card">
+        <div class="prompt-card-top">
+          <div class="prompt-number pn4">Prompt 04 · Full UI Overhaul</div>
+          <div class="prompt-title">Make It Look Like a Real Dashboard</div>
+          <div class="prompt-text">
+            <div class="prompt-text-inner">
+              Improve UI: Add animations, Add loading effects, Make it look like a real analytics dashboard, Use modern fonts and gradients.
+            </div>
+          </div>
+        </div>
+        <div class="prompt-body">
+          <div class="what-label">What this built</div>
+          <div class="what-desc">
+            The biggest visual leap. Every surface was redesigned — fonts, colors, card treatments, background, loading states, and micro-interactions — to match a premium analytics product like Vercel or Amplitude. The site went from "nice website" to "shipping product."
+          </div>
+          <div class="feature-chips">
+            <span class="fc fc-pink">Page Load Scanner</span>
+            <span class="fc fc-pink">KPI Dashboard Strip</span>
+            <span class="fc fc-pink">Animated KPI Counters</span>
+            <span class="fc fc-pink">Glassmorphism Cards</span>
+            <span class="fc fc-pink">Gradient Border Hover</span>
+            <span class="fc fc-pink">Gradient Text Titles</span>
+            <span class="fc fc-pink">Mesh Gradient Hero</span>
+            <span class="fc fc-pink">CSS Grid Background</span>
+            <span class="fc fc-pink">Skeleton Loaders</span>
+            <span class="fc fc-pink">Toast Notifications</span>
+            <span class="fc fc-pink">JetBrains Mono Font</span>
+            <span class="fc fc-pink">Live Clock in Nav</span>
+            <span class="fc fc-pink">Active Nav Scroll Tracking</span>
+            <span class="fc fc-pink">Section Reveal Animations</span>
+          </div>
+          <div class="detail-list">
+            <div class="detail-item"><span class="detail-dot dd-pink"></span><strong>Loading screen:</strong> full-viewport scanner with pulsing logo, animated progress bar filling over 1.8s, and a moving CSS scan-line effect before the dashboard fades in</div>
+            <div class="detail-item"><span class="detail-dot dd-pink"></span><strong>Glassmorphism cards:</strong> dark gradient backgrounds + a CSS mask-composite gradient border that appears on hover, with image zoom and a shimmer highlight sweep</div>
+            <div class="detail-item"><span class="detail-dot dd-pink"></span><strong>KPI strip:</strong> 4 tiles (Mentions, Keywords, Signals, Predictions) with numbers that animate from 0 using an ease-out easing curve on load, then keep ticking live</div>
+            <div class="detail-item"><span class="detail-dot dd-pink"></span><strong>Toast system:</strong> randomly fires every ~8 seconds from the bottom-right, also triggered when a prediction is generated — spring animation using cubic-bezier(0.34, 1.56, 0.64, 1)</div>
+            <div class="detail-item"><span class="detail-dot dd-pink"></span><strong>Fonts:</strong> Plus Jakarta Sans (body), JetBrains Mono (all data labels and values), Bebas Neue (display numbers and headers)</div>
+          </div>
+          <div class="result-bar rb-pink">
+            <span class="rb-icon">✨</span>
+            <div class="rb-text"><strong>Result: Production-quality dashboard</strong>The site now looks indistinguishable from a funded SaaS product. Loading animations, glassmorphism, gradient text, and live toasts make it feel alive.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 5 -->
+    <div class="prompt-block">
+      <div class="step-circle c5">5</div>
+      <div class="prompt-card">
+        <div class="prompt-card-top">
+          <div class="prompt-number pn5">Prompt 05 · Deployment</div>
+          <div class="prompt-title">Deploy It as a Public Website</div>
+          <div class="prompt-text">
+            <div class="prompt-text-inner">
+              I want to deploy this as a public website using GitHub Pages. Give me step-by-step instructions from creating an account to making the site live.
+            </div>
+          </div>
+        </div>
+        <div class="prompt-body">
+          <div class="what-label">What this produced</div>
+          <div class="what-desc">
+            A complete deployment walkthrough — no servers, no hosting fees, no DevOps. GitHub Pages serves the static HTML file with global CDN and HTTPS included for free. The site went from a local file to a publicly accessible URL in under 5 minutes.
+          </div>
+          <div class="feature-chips">
+            <span class="fc fc-orange">GitHub Account Setup</span>
+            <span class="fc fc-orange">Repository Creation</span>
+            <span class="fc fc-orange">File Upload via Browser</span>
+            <span class="fc fc-orange">GitHub Pages Config</span>
+            <span class="fc fc-orange">Live HTTPS URL</span>
+            <span class="fc fc-orange">Custom Domain Option</span>
+          </div>
+          <div class="detail-list">
+            <div class="detail-item"><span class="detail-dot dd-orange"></span>Repository must be named exactly <code style="background:rgba(255,122,26,.1);color:var(--orange);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.8em">username.github.io</code> — this is the special name that activates GitHub Pages as a root site</div>
+            <div class="detail-item"><span class="detail-dot dd-orange"></span>The uploaded file must be named exactly <code style="background:rgba(255,122,26,.1);color:var(--orange);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.8em">index.html</code> — GitHub Pages looks for this filename at the root URL</div>
+            <div class="detail-item"><span class="detail-dot dd-orange"></span>Pages must be enabled in Settings → Pages by setting the branch to <code style="background:rgba(255,122,26,.1);color:var(--orange);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.8em">main</code> — takes about 60 seconds to build</div>
+            <div class="detail-item"><span class="detail-dot dd-orange"></span>Cost: $0. GitHub Pages is completely free for public repositories with no bandwidth limits for normal traffic</div>
+          </div>
+          <div class="result-bar rb-orange">
+            <span class="rb-icon">🌐</span>
+            <div class="rb-text"><strong>Result: Live at mchow06.github.io</strong>The site is publicly accessible worldwide, served over HTTPS with GitHub's CDN. No monthly fees, no server to maintain.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end timeline -->
+
+  <!-- SUMMARY CARD -->
+  <div style="background:linear-gradient(135deg,rgba(184,240,0,.05),rgba(0,229,255,.04));border:1px solid rgba(184,240,0,.2);border-radius:var(--r2);padding:2rem;text-align:center;margin-top:1rem">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.04em;margin-bottom:.6rem">Built entirely with AI</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text2);line-height:1.8;max-width:480px;margin:0 auto">
+      5 conversational prompts. Zero frameworks. Zero backend. One HTML file.<br>
+      Every line of code was generated by Claude — the human provided the direction,<br>the AI handled all implementation, design, and logic.
+    </div>
+    <a href="index.html" style="display:inline-flex;align-items:center;gap:.5rem;margin-top:1.5rem;font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;background:var(--lime);color:#05080f;padding:11px 26px;border-radius:999px;font-weight:700;transition:all .2s">
+      View the Dashboard →
+    </a>
+  </div>
+
+</div><!-- end page-wrap -->
+
+<div class="page-footer">
+  <div class="footer-logo">BasedBW</div>
+  <div class="footer-copy">© 2025 Based Bodyworks Tracker · Built with Claude · Deployed on GitHub Pages</div>
+</div>
+
+<script>
+// Scroll reveal for prompt blocks
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('in'); });
+}, { threshold: 0.08 });
+document.querySelectorAll('.prompt-block').forEach((el, i) => {
+  el.style.transitionDelay = `${i * 0.05}s`;
+  obs.observe(el);
+});
+</script>
+</body>
+</html>
